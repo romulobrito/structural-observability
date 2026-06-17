@@ -6,7 +6,7 @@ Unified Python package for:
 - **PDF-style minimum instrumentation repair** (combinatorial search)
 - Future **Streamlit UI** (Phase 3)
 
-Version **0.1.0** -- Phase 1 migration complete.
+Version **0.2.0** -- Phase 2 YAML cases and unified CLI.
 
 ## Paper engine (standby)
 
@@ -29,6 +29,10 @@ pip install -e .
 python tests/test_tearing_semantics.py
 python tests/test_urs_pdf_regression.py
 
+# YAML-driven case (classify or min_repair)
+structural-obs-run --case cases/urs_pdf_real.yaml
+structural-obs-run --case cases/urs_pdf_repair.yaml --objective min_repair
+
 # Paper benchmark cases (subset)
 structural-obs-run-cases --case 01_urs_ideal --case 02_urs_real --case 10_urs_real_RaC_RaD
 
@@ -41,8 +45,8 @@ structural-obs-min-inst
 ```text
 src/structural_obs/
   tearing/          # classification engine + benchmark registry
-  toolkit/          # min repair + PDF premises + CLI
-cases/              # example YAML metadata (loader: Phase 2)
+  toolkit/          # schemas, min repair, classify service, CLI
+cases/              # YAML case definitions (schema v1.0)
 tests/
 ```
 
@@ -54,6 +58,7 @@ See [MIGRATION.md](MIGRATION.md) for package layout and legacy folder mapping.
 
 | Command | Description |
 |---------|-------------|
+| `structural-obs-run` | Run a YAML case (classify or min_repair) |
 | `structural-obs-run-cases` | Run registered tearing benchmark cases |
 | `structural-obs-min-inst` | PDF minimum instrumentation analysis |
 | `structural-obs-ablation` | Matching preprocessing ablation |

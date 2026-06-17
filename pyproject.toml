@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "structural-observability"
-version = "0.1.0"
+version = "0.2.0"
 description = "CP-SAT structural classification and PDF-style minimum instrumentation"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -21,6 +21,7 @@ app = ["streamlit>=1.28"]
 dev = ["pytest>=7.0"]
 
 [project.scripts]
+structural-obs-run = "structural_obs.toolkit.cli.run_case:main"
 structural-obs-run-cases = "structural_obs.tearing.cli.run_cases:main"
 structural-obs-min-inst = "structural_obs.toolkit.cli.min_instrumentation:main"
 structural-obs-ablation = "structural_obs.tearing.cli.run_matching_ablation:main"

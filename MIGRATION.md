@@ -33,12 +33,14 @@ cd structural_observability
 pip install -e .
 python tests/test_tearing_semantics.py
 python tests/test_urs_pdf_regression.py
+structural-obs-run --case cases/urs_pdf_real.yaml
+structural-obs-run --case cases/urs_pdf_repair.yaml
 structural-obs-run-cases --case 01_urs_ideal --case 02_urs_real
 structural-obs-min-inst --mode repair
 ```
 
 ## Versioning
 
-- Package version: `pyproject.toml` (`0.1.0` at migration).
+- Package version: `pyproject.toml` (`0.2.0` -- YAML schema + unified CLI).
 - Paper reproduction: continue citing `romulobrito/cp-sat-tearing` tag frozen for the article.
 - New features and UI: cite this repository and its tags.

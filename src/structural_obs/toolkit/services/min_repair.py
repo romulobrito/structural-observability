@@ -101,11 +101,13 @@ def evaluate_baseline(
     scenario_key: str,
     base_measured: Set[str],
     config: TearingConfig,
+    *,
+    equations: Optional[Equations] = None,
 ) -> EvaluationRow:
     """Evaluate the PDF base set without additions."""
-    equations = equations_documento()
+    eqs = equations_documento() if equations is None else equations
     return evaluate_measured(
-        equations,
+        eqs,
         set(base_measured),
         scenario_key=scenario_key,
         base_count=len(base_measured),
@@ -121,6 +123,7 @@ def find_minimum_repair(
     candidates: Sequence[str],
     config: TearingConfig,
     *,
+    equations: Optional[Equations] = None,
     max_additions: Optional[int] = None,
 ) -> RepairSearchResult:
     """Find minimum additional sensors from candidates to reach full closed coverage.
@@ -130,7 +133,7 @@ def find_minimum_repair(
       2) among ties, keep all optimal combinations.
     Feasibility criterion: C_cl == |V| (fully closed structural coverage).
     """
-    equations = equations_documento()
+    eqs = equations_documento() if equations is None else equations
     base_frozen = frozenset(base_measured)
     pool = tuple(v for v in candidates if v not in base_frozen)
     limit = max_additions if max_additions is not None else len(pool)
@@ -144,7 +147,7 @@ def find_minimum_repair(
         for combo in itertools.combinations(pool, k):
             measured = set(base_measured) | set(combo)
             row = evaluate_measured(
-                equations,
+                eqs,
                 measured,
                 scenario_key=scenario_key,
                 base_count=len(base_measured),
