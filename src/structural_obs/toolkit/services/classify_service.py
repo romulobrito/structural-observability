@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, TYPE_CHECKING
 
 from structural_obs.tearing.core import TearingConfig, TearingResult, classify_tearing
 from structural_obs.toolkit.premises import repair_candidates
@@ -16,6 +16,10 @@ from structural_obs.toolkit.services.min_repair import (
     evaluate_measured,
     find_minimum_repair,
 )
+
+if TYPE_CHECKING:
+    from structural_obs.toolkit.milp.documento_ilp import MilpPlacementResult
+    from structural_obs.toolkit.services.milp_service import MilpRunSummary
 
 
 @dataclass(frozen=True)
@@ -47,6 +51,8 @@ class CaseRunResult:
     tearing_result: Optional[TearingResult] = None
     repair_result: Optional[RepairSearchResult] = None
     repair_rows: Optional[tuple[EvaluationRow, ...]] = None
+    milp_result: Optional["MilpPlacementResult"] = None
+    milp_summary: Optional["MilpRunSummary"] = None
 
 
 def tearing_config_from_case(case: CaseDefinition) -> TearingConfig:
@@ -166,6 +172,10 @@ def run_case(case: CaseDefinition) -> CaseRunResult:
         return run_classification(case)
     if case.analysis.objective == "min_repair":
         return run_minimum_repair(case)
+    if case.analysis.objective in ("milp_global", "milp_repair", "milp_verify"):
+        from structural_obs.toolkit.services.milp_service import run_milp
+
+        return run_milp(case)
     raise ValueError(f"Unsupported objective: {case.analysis.objective}")
 
 

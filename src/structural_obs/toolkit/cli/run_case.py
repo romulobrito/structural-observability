@@ -48,6 +48,27 @@ def _print_repair(run) -> None:
         )
 
 
+def _print_milp(run) -> None:
+    summary = run.milp_summary
+    if summary is None:
+        return
+    print(
+        f"Case: {summary.case_id} | objective={summary.objective} | mode={summary.mode}\n"
+        f"  status={summary.status} | sensors={summary.sensor_count} "
+        f"| solver={summary.solver_name}\n"
+        f"  measured={list(summary.measured)}"
+    )
+    if summary.tearing_c_closed is not None:
+        print(
+            f"  tearing audit C_cl={summary.tearing_c_closed}/{summary.tearing_total} "
+            f"| ok={summary.tearing_criterion_satisfied}"
+        )
+    if summary.conflicts:
+        print(f"  conflicts ({len(summary.conflicts)}):")
+        for issue in summary.conflicts[:5]:
+            print(f"    - {issue}")
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         description="Run a YAML case (classify or min_repair) and export audit artifacts."
@@ -60,7 +81,13 @@ def main(argv: Optional[list[str]] = None) -> int:
     )
     parser.add_argument(
         "--objective",
-        choices=("classify", "min_repair"),
+        choices=(
+            "classify",
+            "min_repair",
+            "milp_global",
+            "milp_repair",
+            "milp_verify",
+        ),
         default=None,
         help="Override analysis.objective from the YAML file.",
     )
@@ -103,8 +130,12 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     if run.objective == "classify":
         _print_classification(run)
-    else:
+    elif run.objective == "min_repair":
         _print_repair(run)
+    elif run.objective in ("milp_global", "milp_repair", "milp_verify"):
+        _print_milp(run)
+    else:
+        print(f"Objective: {run.objective}")
 
     if not args.no_export:
         out_dir = args.out_dir or default_run_dir(

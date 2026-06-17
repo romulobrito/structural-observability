@@ -1,0 +1,12 @@
+schema_version: "1.0"
+case:
+  id: urs_milp_global
+  name: "URS MILP global (document model)"
+  section: "MILP"
+  equations_profile: urs_document
+  instrumentation:
+    measured: []
+    known_constants: []
+  analysis:
+    objective: milp_global
+    criterion: C_cl

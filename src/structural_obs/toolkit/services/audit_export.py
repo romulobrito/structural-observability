@@ -20,6 +20,7 @@ from structural_obs.toolkit.services.classify_service import (
     summary_to_dict,
     tearing_result_to_dict,
 )
+from structural_obs.toolkit.services.milp_service import milp_result_to_dict, milp_summary_to_dict
 
 
 def default_run_dir(case_id: str, objective: str, base: Path) -> Path:
@@ -48,6 +49,10 @@ def build_report_payload(run: CaseRunResult) -> Dict[str, Any]:
         payload["tearing"] = tearing_result_to_dict(run.tearing_result)
     if run.repair_result is not None:
         payload["repair"] = repair_result_to_dict(run.repair_result)
+    if run.milp_summary is not None:
+        payload["milp"] = milp_summary_to_dict(run.milp_summary)
+    if run.milp_result is not None:
+        payload["milp_placement"] = milp_result_to_dict(run.milp_result)
     return payload
 
 
@@ -94,6 +99,22 @@ def write_run_artifacts(
         )
     if run.repair_rows:
         rows.extend(repair_rows_to_csv_rows(list(run.repair_rows)))
+    if run.milp_summary is not None:
+        ms = run.milp_summary
+        rows.append(
+            {
+                "case_id": run.case.case_id,
+                "objective": run.objective,
+                "milp_status": ms.status,
+                "sensor_count": ms.sensor_count,
+                "measured": ", ".join(ms.measured),
+                "additions": ", ".join(ms.additions),
+                "redundancy_cost": ms.redundancy_cost,
+                "tearing_C_cl": ms.tearing_c_closed,
+                "tearing_V": ms.tearing_total,
+                "tearing_criterion_ok": ms.tearing_criterion_satisfied,
+            }
+        )
     if rows:
         pd.DataFrame(rows).to_csv(csv_path, index=False)
         written["csv"] = csv_path

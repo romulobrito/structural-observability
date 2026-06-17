@@ -7,6 +7,13 @@ from dataclasses import dataclass, replace
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from structural_obs.app.ui_labels import (
+    MILP_MODE_GLOBAL,
+    MILP_MODE_REPAIR,
+    MILP_MODE_VERIFY,
+    MILP_STATUS_FEASIBLE,
+    MILP_STATUS_INFEASIBLE,
+    MILP_STATUS_NOT_OPTIMAL,
+    MILP_STATUS_OPTIMAL,
     SOLVER_CONFIRMED,
     SOLVER_OTHER,
     VAR_STATUS_BY_CLASS,
@@ -15,6 +22,7 @@ from structural_obs.app.ui_labels import (
 from structural_obs.tearing.core import TearingResult
 from structural_obs.toolkit.schemas.case_schema import AnalysisConfig, InstrumentationConfig
 from structural_obs.toolkit.services.classify_service import CaseRunResult, run_classification
+from structural_obs.toolkit.services.milp_service import MilpRunSummary
 from structural_obs.toolkit.services.min_repair import EvaluationRow
 
 
@@ -88,6 +96,28 @@ class RepairView:
     baseline: ClassificationView
     baseline_tearing: Optional[TearingResult]
     candidates: Tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class MilpView:
+    """Simple-language view for MILP placement objectives."""
+
+    headline: str
+    status: str
+    mode: str
+    mode_label: str
+    sensor_count: int
+    measured_tags: Tuple[str, ...]
+    inferred_tags: Tuple[str, ...]
+    additions_tags: Tuple[str, ...]
+    redundancy_cost: float
+    conflicts: Tuple[str, ...]
+    tearing_c_closed: Optional[int]
+    tearing_total: Optional[int]
+    tearing_computes_all: Optional[bool]
+    solver_name: str
+    classification: Optional[ClassificationView]
+    tearing_result: Optional[TearingResult]
 
 
 def solver_label(status: str) -> str:
@@ -314,3 +344,83 @@ def repair_option_table_rows(options: Sequence[RepairOptionView]) -> List[Dict[s
             }
         )
     return rows
+
+
+def _milp_mode_label(mode: str) -> str:
+    labels = {
+        "global": MILP_MODE_GLOBAL,
+        "verify": MILP_MODE_VERIFY,
+        "repair": MILP_MODE_REPAIR,
+    }
+    return labels.get(mode, mode)
+
+
+def _milp_headline(summary: MilpRunSummary) -> str:
+    mode = summary.mode
+    status = summary.status
+    n = summary.sensor_count
+
+    if mode == "global" and status == "optimal":
+        return (
+            f"Solução ótima: {n} medidores — menor conjunto pelas regras MILP."
+        )
+    if mode == "verify" and status == "feasible":
+        return "O conjunto informado cumpre as regras MILP."
+    if mode == "verify" and status == "infeasible":
+        return (
+            "O conjunto informado não cumpre as regras MILP "
+            "(auditoria; resultado esperado para os cenários PDF)."
+        )
+    if mode == "repair" and status == "optimal":
+        return f"Solução ótima com {n} medidores (base fixa + acréscimos mínimos)."
+    if mode == "repair" and status == "infeasible":
+        return (
+            "Não há solução MILP com a base fixa e os candidatos permitidos. "
+            "Para reparo estrutural, use a aba Instrumentação mínima."
+        )
+    if status == "infeasible":
+        return "Não existe solução viável nas regras MILP com os limites informados."
+    if status == "feasible":
+        return "O conjunto fixado é viável nas regras MILP."
+    if status == "optimal":
+        return f"MILP encontrou {n} medidores (modo {mode})."
+    return "O solver não confirmou solução ótima (tempo ou limites numéricos)."
+
+
+def _milp_status_label(status: str) -> str:
+    labels = {
+        "optimal": MILP_STATUS_OPTIMAL,
+        "feasible": MILP_STATUS_FEASIBLE,
+        "infeasible": MILP_STATUS_INFEASIBLE,
+        "not_optimal": MILP_STATUS_NOT_OPTIMAL,
+    }
+    return labels.get(status, status)
+
+
+def present_milp(run: CaseRunResult) -> MilpView:
+    """Build a MilpView from a MILP run."""
+    if run.milp_summary is None:
+        raise ValueError("CaseRunResult is not a MILP run")
+    summary = run.milp_summary
+    classification: Optional[ClassificationView] = None
+    if run.classification is not None and run.tearing_result is not None:
+        classification = present_classification(run)
+    tearing_ok: Optional[bool] = summary.tearing_criterion_satisfied
+    return MilpView(
+        headline=_milp_headline(summary),
+        status=_milp_status_label(summary.status),
+        mode=summary.mode,
+        mode_label=_milp_mode_label(summary.mode),
+        sensor_count=summary.sensor_count,
+        measured_tags=summary.measured,
+        inferred_tags=summary.inferred,
+        additions_tags=summary.additions,
+        redundancy_cost=summary.redundancy_cost,
+        conflicts=summary.conflicts,
+        tearing_c_closed=summary.tearing_c_closed,
+        tearing_total=summary.tearing_total,
+        tearing_computes_all=tearing_ok,
+        solver_name=summary.solver_name,
+        classification=classification,
+        tearing_result=run.tearing_result,
+    )

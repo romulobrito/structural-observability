@@ -8,7 +8,14 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Literal, Mapping, Optional, Set
 
 Equations = Dict[str, List[str]]
-Objective = Literal["classify", "min_repair"]
+Objective = Literal[
+    "classify",
+    "min_repair",
+    "milp_global",
+    "milp_repair",
+    "milp_verify",
+]
+MilpObjective = Literal["milp_global", "milp_repair", "milp_verify"]
 Criterion = Literal["C_cl", "C_ext"]
 
 _VAR_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -142,7 +149,9 @@ def validate_case_document(doc: CaseDocument, equations: Equations) -> CaseDefin
                 raise ValueError(f"allowed_outputs references unknown equation '{eq_name}'")
             _validate_subset(set(allowed), set(equations[eq_name]), f"allowed_outputs[{eq_name}]")
 
-    if doc.analysis.objective == "min_repair":
+    objective = doc.analysis.objective
+
+    if objective == "min_repair":
         if doc.analysis.repair is None:
             raise ValueError("min_repair objective requires analysis.repair section")
         base = set(doc.analysis.repair.base_measured)
@@ -151,6 +160,26 @@ def validate_case_document(doc: CaseDocument, equations: Equations) -> CaseDefin
             _validate_variable_name(cand, "repair.candidates")
         if doc.analysis.criterion != "C_cl":
             raise ValueError("min_repair currently supports criterion C_cl only")
+
+    if objective == "milp_repair":
+        if doc.analysis.repair is None:
+            raise ValueError("milp_repair objective requires analysis.repair section")
+        base = set(doc.analysis.repair.base_measured)
+        _validate_subset(base, universe, "repair.base_measured")
+        for cand in doc.analysis.repair.candidates:
+            _validate_variable_name(cand, "repair.candidates")
+        if not base:
+            raise ValueError("milp_repair requires non-empty repair.base_measured")
+
+    if objective == "milp_verify":
+        if not measured:
+            raise ValueError("milp_verify requires non-empty instrumentation.measured")
+
+    if objective in ("milp_global", "milp_repair", "milp_verify"):
+        if doc.equations_profile != "urs_document":
+            raise ValueError(
+                "MILP objectives currently require equations_profile: urs_document"
+            )
 
     return CaseDefinition(
         schema_version=doc.schema_version,

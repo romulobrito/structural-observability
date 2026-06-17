@@ -86,8 +86,17 @@ def _parse_analysis(raw: Any) -> AnalysisConfig:
     if not isinstance(raw, dict):
         raise ValueError("analysis must be a mapping")
     objective = str(raw.get("objective", "classify"))
-    if objective not in ("classify", "min_repair"):
-        raise ValueError("analysis.objective must be 'classify' or 'min_repair'")
+    allowed_objectives = (
+        "classify",
+        "min_repair",
+        "milp_global",
+        "milp_repair",
+        "milp_verify",
+    )
+    if objective not in allowed_objectives:
+        raise ValueError(
+            f"analysis.objective must be one of {allowed_objectives}"
+        )
     criterion = str(raw.get("criterion", "C_cl"))
     if criterion not in ("C_cl", "C_ext"):
         raise ValueError("analysis.criterion must be 'C_cl' or 'C_ext'")

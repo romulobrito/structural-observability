@@ -15,9 +15,10 @@ from structural_obs.app.bundle import build_audit_zip
 from structural_obs.app.display import (
     render_classification_details,
     render_classification_summary,
+    render_milp_summary,
     render_repair_summary,
 )
-from structural_obs.app.presenters import present_classification, present_repair
+from structural_obs.app.presenters import present_classification, present_milp, present_repair
 from structural_obs.app.ui_labels import (
     ABOUT_TEXT,
     ABOUT_TITLE,
@@ -30,20 +31,29 @@ from structural_obs.app.ui_labels import (
     ERROR_RUN_FAILED,
     PRESET_IDEAL,
     PRESET_LABEL,
+    PRESET_MILP_GLOBAL,
+    PRESET_MILP_REPAIR,
+    PRESET_MILP_VERIFY_IDEAL,
+    PRESET_MILP_VERIFY_REAL,
     PRESET_REAL,
     PRESET_REPAIR,
     REPAIR_BASELINE_INFO,
     RUN_DIAGNOSTIC,
+    RUN_MILP,
     RUN_REPAIR,
     SECTION_REPAIR_BEFORE,
     SIDEBAR_HEADER,
     SIDEBAR_TIME_LIMIT,
     SPINNER_DIAGNOSTIC,
+    SPINNER_MILP,
     SPINNER_REPAIR,
     TAB_DIAGNOSTIC,
+    TAB_MILP,
     TAB_REPAIR,
     UPLOAD_YAML,
     YAML_EDITOR,
+    MILP_PRESET_HINTS,
+    MILP_WARNING,
 )
 from structural_obs.toolkit.schemas.case_schema import AnalysisConfig
 from structural_obs.toolkit.services.classify_service import CaseRunResult, run_case
@@ -55,6 +65,10 @@ PRESET_PATHS: dict[str, Path] = {
     PRESET_IDEAL: CASES_DIR / "urs_pdf_ideal.yaml",
     PRESET_REAL: CASES_DIR / "urs_pdf_real.yaml",
     PRESET_REPAIR: CASES_DIR / "urs_pdf_repair.yaml",
+    PRESET_MILP_GLOBAL: CASES_DIR / "urs_milp_global.yaml",
+    PRESET_MILP_VERIFY_REAL: CASES_DIR / "urs_milp_verify_real.yaml",
+    PRESET_MILP_VERIFY_IDEAL: CASES_DIR / "urs_milp_verify_ideal.yaml",
+    PRESET_MILP_REPAIR: CASES_DIR / "urs_milp_repair.yaml",
 }
 
 
@@ -216,6 +230,71 @@ def _repair_tab(advanced: bool, time_limit: float) -> None:
         _download_zip(stored)
 
 
+def _render_milp(run: CaseRunResult, advanced: bool) -> None:
+    import streamlit as st
+
+    view = present_milp(run)
+    if run.milp_summary is not None and run.milp_summary.status in (
+        "optimal",
+        "feasible",
+    ):
+        st.success(view.headline)
+    elif run.milp_summary is not None and run.milp_summary.status == "infeasible":
+        st.warning(view.headline)
+    elif run.milp_summary is not None and run.milp_summary.status == "not_optimal":
+        st.error(view.headline)
+    else:
+        st.info(view.headline)
+    render_milp_summary(view, advanced)
+
+
+def _milp_tab(advanced: bool) -> None:
+    import streamlit as st
+
+    st.warning(MILP_WARNING)
+    preset = st.selectbox(
+        PRESET_LABEL,
+        [
+            PRESET_MILP_GLOBAL,
+            PRESET_MILP_VERIFY_REAL,
+            PRESET_MILP_VERIFY_IDEAL,
+            PRESET_MILP_REPAIR,
+        ],
+        key="milp_preset",
+    )
+    hint = MILP_PRESET_HINTS.get(preset)
+    if hint:
+        st.info(hint)
+    yaml_text: Optional[str] = None
+    if advanced:
+        upload = st.file_uploader(UPLOAD_YAML, type=["yaml", "yml"], key="milp_upload")
+        if upload is not None:
+            yaml_text = upload.getvalue().decode("utf-8")
+        else:
+            default_path = PRESET_PATHS[preset]
+            yaml_text = default_path.read_text(encoding="utf-8")
+            yaml_text = st.text_area(YAML_EDITOR, value=yaml_text, height=200, key="milp_yaml")
+
+    if st.button(RUN_MILP, type="primary", key="milp_run_btn"):
+        try:
+            if advanced and yaml_text:
+                case_def = _load_yaml_text(yaml_text, preset)
+            else:
+                case_def = _load_preset(PRESET_PATHS[preset])
+            with st.spinner(SPINNER_MILP):
+                result = run_case(case_def)
+            st.session_state["milp_result"] = result
+        except (ValueError, yaml.YAMLError) as exc:
+            st.error(f"{ERROR_INVALID_CASE} ({exc})")
+        except Exception as exc:
+            st.error(f"{ERROR_RUN_FAILED} ({exc})")
+
+    stored = st.session_state.get("milp_result")
+    if isinstance(stored, CaseRunResult):
+        _render_milp(stored, advanced)
+        _download_zip(stored)
+
+
 def run_app() -> None:
     """Streamlit application entry (called by streamlit run)."""
     import streamlit as st
@@ -233,11 +312,13 @@ def run_app() -> None:
             st.write(ABOUT_TEXT)
 
     st.info(CRITERION_LINE)
-    tab_diag, tab_repair = st.tabs([TAB_DIAGNOSTIC, TAB_REPAIR])
+    tab_diag, tab_repair, tab_milp = st.tabs([TAB_DIAGNOSTIC, TAB_REPAIR, TAB_MILP])
     with tab_diag:
         _diagnostic_tab(advanced, float(time_limit))
     with tab_repair:
         _repair_tab(advanced, float(time_limit))
+    with tab_milp:
+        _milp_tab(advanced)
 
 
 def main() -> None:

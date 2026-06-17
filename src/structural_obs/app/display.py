@@ -7,7 +7,7 @@ from typing import Optional, Sequence
 
 import pandas as pd
 
-from structural_obs.app.presenters import ClassificationView, RepairView, repair_option_table_rows
+from structural_obs.app.presenters import ClassificationView, MilpView, RepairView, repair_option_table_rows
 from structural_obs.app.ui_labels import (
     CARD_CALCULABLE,
     CARD_DIRECT,
@@ -16,6 +16,10 @@ from structural_obs.app.ui_labels import (
     CARD_INDETERMINATE,
     CARD_INFERRED,
     CARD_MEASURED,
+    CARD_MILP_INFERRED,
+    CARD_MILP_REDUNDANCY,
+    CARD_MILP_SENSORS,
+    CARD_MILP_TEARING,
     CARD_NOT_CALCULABLE,
     CARD_OPEN_TEARS,
     CARD_TO_ADD,
@@ -38,6 +42,12 @@ from structural_obs.app.ui_labels import (
     HELP_INFERRED,
     HELP_MEASURED,
     HELP_NOT_CALCULABLE,
+    HELP_MILP_INFERRED,
+    HELP_MILP_MODE,
+    HELP_MILP_REDUNDANCY,
+    HELP_MILP_SENSORS,
+    HELP_MILP_STATUS,
+    HELP_MILP_TEARING,
     HELP_OPEN_TEARS,
     HELP_TECH_C_CL,
     HELP_TECH_C_DIR,
@@ -54,6 +64,12 @@ from structural_obs.app.ui_labels import (
     SECTION_INFERRED,
     SECTION_INSTALL_OPTIONS,
     SECTION_MEASURED,
+    SECTION_MILP_ADDITIONS,
+    SECTION_MILP_CONFLICTS,
+    SECTION_MILP_INFERRED,
+    SECTION_MILP_MEASURED,
+    SECTION_MILP_MODE,
+    SECTION_MILP_TEARING_AUDIT,
     SECTION_OPEN_BALANCES,
     SECTION_REPAIR_BEFORE,
     SECTION_REPAIR_CANDIDATES,
@@ -229,3 +245,56 @@ def render_repair_summary(view: RepairView) -> None:
             COL_OPEN_TEARS,
         ]
         st.dataframe(df, use_container_width=True, hide_index=True)
+
+
+def render_milp_summary(view: MilpView, advanced: bool) -> None:
+    """Render MILP placement summary and optional tearing audit."""
+    import streamlit as st
+
+    m1, m2 = st.columns(2)
+    m1.metric(SECTION_MILP_MODE, view.mode_label, help=HELP_MILP_MODE)
+    m2.metric("Status MILP", view.status, help=HELP_MILP_STATUS)
+    st.caption(f"Solver: {view.solver_name}")
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric(CARD_MILP_SENSORS, view.sensor_count, help=HELP_MILP_SENSORS)
+    c2.metric(CARD_MILP_INFERRED, len(view.inferred_tags), help=HELP_MILP_INFERRED)
+    c3.metric(
+        CARD_MILP_REDUNDANCY,
+        f"{view.redundancy_cost:.1f}",
+        help=HELP_MILP_REDUNDANCY,
+    )
+    if view.tearing_c_closed is not None and view.tearing_total is not None:
+        c4.metric(
+            CARD_MILP_TEARING,
+            f"{view.tearing_c_closed}/{view.tearing_total}",
+            help=HELP_MILP_TEARING,
+        )
+    else:
+        c4.metric(CARD_MILP_TEARING, "—", help=HELP_MILP_TEARING)
+
+    if view.measured_tags:
+        st.markdown(f"**{SECTION_MILP_MEASURED}** ({len(view.measured_tags)})")
+        st.write(_tag_list(view.measured_tags))
+    if view.inferred_tags:
+        st.markdown(f"**{SECTION_MILP_INFERRED}** ({len(view.inferred_tags)})")
+        st.write(_tag_list(view.inferred_tags))
+
+    if view.additions_tags:
+        st.markdown(f"**{SECTION_MILP_ADDITIONS}** ({len(view.additions_tags)})")
+        st.write(_tag_list(view.additions_tags))
+
+    if view.conflicts:
+        st.subheader(SECTION_MILP_CONFLICTS)
+        for issue in view.conflicts:
+            st.write(f"- {issue}")
+
+    if view.classification is not None and view.tearing_result is not None:
+        st.subheader(SECTION_MILP_TEARING_AUDIT)
+        render_classification_summary(view.classification)
+        if advanced:
+            render_classification_details(
+                view.classification,
+                advanced,
+                view.tearing_result,
+            )
