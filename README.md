@@ -6,7 +6,7 @@ Unified Python package for:
 - **PDF-style minimum instrumentation repair** (combinatorial search)
 - Future **Streamlit UI** (Phase 3)
 
-Version **0.2.0** -- Phase 2 YAML cases and unified CLI.
+Version **0.3.0** -- Phase 3 Streamlit UI (simple PT labels).
 
 ## Paper engine (standby)
 
@@ -19,7 +19,7 @@ Active development is **only** in this package. See [MIGRATION.md](MIGRATION.md)
 
 ```bash
 cd structural_observability
-pip install -e .
+pip install -e ".[app]"
 ```
 
 ## Quick start
@@ -31,13 +31,9 @@ python tests/test_urs_pdf_regression.py
 
 # YAML-driven case (classify or min_repair)
 structural-obs-run --case cases/urs_pdf_real.yaml
-structural-obs-run --case cases/urs_pdf_repair.yaml --objective min_repair
 
-# Paper benchmark cases (subset)
-structural-obs-run-cases --case 01_urs_ideal --case 02_urs_real --case 10_urs_real_RaC_RaD
-
-# PDF minimum instrumentation (Sec. 4.1-4.2.3)
-structural-obs-min-inst
+# Streamlit UI (simple Portuguese)
+structural-obs-app
 ```
 
 ## Package layout
@@ -46,6 +42,7 @@ structural-obs-min-inst
 src/structural_obs/
   tearing/          # classification engine + benchmark registry
   toolkit/          # schemas, min repair, classify service, CLI
+  app/              # Streamlit UI (simple PT labels)
 cases/              # YAML case definitions (schema v1.0)
 tests/
 ```
@@ -59,6 +56,7 @@ See [MIGRATION.md](MIGRATION.md) for package layout and legacy folder mapping.
 | Command | Description |
 |---------|-------------|
 | `structural-obs-run` | Run a YAML case (classify or min_repair) |
+| `structural-obs-app` | Streamlit UI (diagnostico + instrumentacao minima) |
 | `structural-obs-run-cases` | Run registered tearing benchmark cases |
 | `structural-obs-min-inst` | PDF minimum instrumentation analysis |
 | `structural-obs-ablation` | Matching preprocessing ablation |
