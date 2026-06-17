@@ -11,3 +11,4 @@ results/
 .mypy_cache/
 planning.md
 tearing_results_table.tex
+MIGRATION.md
