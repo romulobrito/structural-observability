@@ -13,7 +13,7 @@ Version **0.3.0** -- Phase 3 Streamlit UI (simple PT labels).
 The code cited in the paper remains at
 [romulobrito/cp-sat-tearing](https://github.com/romulobrito/cp-sat-tearing)
 (`cp-sat-tearing-public/` locally). That repository is **frozen for the paper**.
-Active development is **only** in this package. See [MIGRATION.md](MIGRATION.md).
+Active development is **only** in this package.
 
 ## Install
 
@@ -46,10 +46,6 @@ src/structural_obs/
 cases/              # YAML case definitions (schema v1.0)
 tests/
 ```
-
-## Documentation
-
-See [MIGRATION.md](MIGRATION.md) for package layout and legacy folder mapping.
 
 ## CLI commands
 
