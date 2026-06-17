@@ -3,8 +3,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from structural_obs import PROJECT_ROOT
 from structural_obs.app.presenters import present_classification, present_repair
 from structural_obs.app.ui_labels import SOLVER_CONFIRMED
@@ -20,8 +18,11 @@ def test_classification_headline_real() -> None:
     view = present_classification(run)
     assert "22 medidas" in view.headline
     assert "34 de 43" in view.headline
-    assert view.calculable == 34
-    assert not view.computes_all
+    assert view.metrics.calculable == 34
+    assert not view.metrics.computes_all
+    assert view.metrics.inferred_count > 0
+    assert view.metrics.indeterminate_count > 0
+    assert len(view.status_groups) >= 2
 
 
 def test_classification_headline_ideal() -> None:
@@ -29,7 +30,8 @@ def test_classification_headline_ideal() -> None:
     run = run_case(case)
     view = present_classification(run)
     assert "todas as 43" in view.headline
-    assert view.computes_all
+    assert view.metrics.computes_all
+    assert view.metrics.indeterminate_count == 0
 
 
 def test_repair_headline_and_options() -> None:
@@ -39,9 +41,12 @@ def test_repair_headline_and_options() -> None:
     assert view.minimum_additions == 2
     assert len(view.options) == 3
     assert view.solver_label == SOLVER_CONFIRMED
+    assert view.baseline.metrics.calculable == 34
+    assert len(view.candidates) == 4
     for opt in view.options:
         assert opt.computes_all
         assert len(opt.sensors_to_add) == 2
+        assert opt.indeterminate_count == 0
 
 
 def test_tags_only_no_descriptions() -> None:
@@ -49,3 +54,4 @@ def test_tags_only_no_descriptions() -> None:
     run = run_case(case)
     view = present_classification(run)
     assert "Ra_C" in view.not_calculable_tags or "Ra_C" in view.open_balance_tags
+    assert all(" " not in tag for tag in view.measured_tags)

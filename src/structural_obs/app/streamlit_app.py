@@ -8,56 +8,41 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Optional
 
-import pandas as pd
 import yaml
 
 from structural_obs import PROJECT_ROOT
 from structural_obs.app.bundle import build_audit_zip
-from structural_obs.app.presenters import (
-    present_classification,
-    present_repair,
-    repair_option_table_rows,
+from structural_obs.app.display import (
+    render_classification_details,
+    render_classification_summary,
+    render_repair_summary,
 )
+from structural_obs.app.presenters import present_classification, present_repair
 from structural_obs.app.ui_labels import (
     ABOUT_TEXT,
     ABOUT_TITLE,
     ADVANCED_MODE,
     APP_SUBTITLE,
     APP_TITLE,
-    CARD_CALCULABLE,
-    CARD_MEASURED,
-    CARD_NOT_CALCULABLE,
-    CARD_TO_ADD,
-    CARD_TOTAL_AFTER,
-    COL_INSTALL,
-    COL_OPTION,
-    COL_RESULT,
-    COL_STATUS,
-    COL_TAG,
-    COMPUTES_ALL_QUESTION,
     CRITERION_LINE,
     DOWNLOAD_ZIP,
     ERROR_INVALID_CASE,
     ERROR_RUN_FAILED,
-    NO,
     PRESET_IDEAL,
     PRESET_LABEL,
     PRESET_REAL,
     PRESET_REPAIR,
+    REPAIR_BASELINE_INFO,
     RUN_DIAGNOSTIC,
     RUN_REPAIR,
-    SECTION_CALCULATED,
-    SECTION_INSTALL_OPTIONS,
-    SECTION_NOT_CALCULATED,
-    SECTION_OPEN_BALANCES,
+    SECTION_REPAIR_BEFORE,
+    SIDEBAR_HEADER,
+    SIDEBAR_TIME_LIMIT,
+    SPINNER_DIAGNOSTIC,
+    SPINNER_REPAIR,
     TAB_DIAGNOSTIC,
     TAB_REPAIR,
-    TECH_C_CL,
-    TECH_C_DIR,
-    TECH_C_EXT,
-    TECH_SOLVER,
     UPLOAD_YAML,
-    YES,
     YAML_EDITOR,
 )
 from structural_obs.toolkit.schemas.case_schema import AnalysisConfig
@@ -97,51 +82,12 @@ def _render_classification(run: CaseRunResult, advanced: bool) -> None:
 
     view = present_classification(run)
     st.success(view.headline)
-    c1, c2, c3 = st.columns(3)
-    c1.metric(CARD_CALCULABLE, f"{view.calculable} de {view.total}")
-    c2.metric(CARD_NOT_CALCULABLE, view.not_calculable)
-    c3.metric(CARD_MEASURED, view.measured_count)
-    st.write(f"{COMPUTES_ALL_QUESTION} **{YES if view.computes_all else NO}**")
-    st.caption(view.solver_label)
-
-    with st.expander(SECTION_CALCULATED, expanded=False):
-        if view.calculable_tags:
-            st.write(", ".join(view.calculable_tags))
-        else:
-            st.write("-")
-
-    with st.expander(SECTION_NOT_CALCULATED, expanded=bool(view.not_calculable_tags)):
-        if view.not_calculable_tags:
-            st.write(", ".join(view.not_calculable_tags))
-        else:
-            st.write("-")
-
-    with st.expander(SECTION_OPEN_BALANCES, expanded=bool(view.open_balance_tags)):
-        if view.open_balance_tags:
-            st.write(", ".join(view.open_balance_tags))
-        else:
-            st.write("-")
-
-    if advanced and run.classification is not None and run.tearing_result is not None:
-        st.subheader("Detalhes tecnicos")
-        summary = run.classification
-        tr = run.tearing_result
-        t1, t2, t3, t4 = st.columns(4)
-        t1.metric(TECH_C_CL, f"{summary.c_closed}/{summary.total_variables}")
-        t2.metric(TECH_C_EXT, f"{summary.c_external}/{summary.total_variables}")
-        t3.metric(TECH_C_DIR, f"{summary.c_direct}/{summary.total_variables}")
-        t4.metric(TECH_SOLVER, summary.solver_status)
-        df = pd.DataFrame(
-            [{"tag": r["tag"], "status": r["status"]} for r in view.variable_rows]
-        )
-        df.columns = [COL_TAG, COL_STATUS]
-        st.dataframe(df, use_container_width=True, hide_index=True)
-        st.json(
-            {
-                "open_tears": tr.tears_open,
-                "effective_indeterminate": tr.effective_indeterminate,
-            }
-        )
+    render_classification_summary(view)
+    render_classification_details(
+        view,
+        advanced,
+        run.tearing_result,
+    )
 
 
 def _render_repair(run: CaseRunResult, advanced: bool) -> None:
@@ -153,35 +99,12 @@ def _render_repair(run: CaseRunResult, advanced: bool) -> None:
     else:
         st.success(view.headline)
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric(CARD_MEASURED, view.base_measured_count)
-    if view.minimum_additions is not None:
-        c2.metric(CARD_TO_ADD, view.minimum_additions)
-        c3.metric(CARD_TOTAL_AFTER, view.total_after or "-")
-    else:
-        c2.metric(CARD_TO_ADD, "-")
-        c3.metric(
-            CARD_CALCULABLE,
-            f"{view.baseline_calculable} de {view.baseline_total}",
-        )
-    st.caption(view.solver_label)
+    render_repair_summary(view)
 
-    if view.options:
-        st.subheader(SECTION_INSTALL_OPTIONS)
-        table = repair_option_table_rows(view.options)
-        df = pd.DataFrame(table)
-        df.columns = [COL_OPTION, COL_INSTALL, COL_RESULT]
-        st.dataframe(df, use_container_width=True, hide_index=True)
-
-    if advanced and run.repair_result is not None:
-        st.subheader("Detalhes tecnicos")
-        st.write(
-            {
-                "minimum_additions": run.repair_result.minimum_additions,
-                "evaluated_count": len(run.repair_result.all_evaluated),
-                "candidate_pool": list(run.repair_result.candidate_pool),
-            }
-        )
+    st.subheader(SECTION_REPAIR_BEFORE)
+    st.info(view.baseline.headline)
+    render_classification_summary(view.baseline)
+    render_classification_details(view.baseline, advanced, view.baseline_tearing)
 
 
 def _download_zip(run: CaseRunResult) -> None:
@@ -211,7 +134,7 @@ def _diagnostic_tab(advanced: bool, time_limit: float) -> None:
             yaml_text = default_path.read_text(encoding="utf-8")
             yaml_text = st.text_area(YAML_EDITOR, value=yaml_text, height=200, key="diag_yaml")
 
-    if st.button(RUN_DIAGNOSTIC, type="primary", key="diag_run"):
+    if st.button(RUN_DIAGNOSTIC, type="primary", key="diag_run_btn"):
         try:
             if advanced and yaml_text:
                 case_def = _load_yaml_text(yaml_text, preset)
@@ -230,27 +153,24 @@ def _diagnostic_tab(advanced: bool, time_limit: float) -> None:
                 case_def,
                 solver=replace(case_def.solver, time_limit_s=time_limit),
             )
-            with st.spinner("Analisando medidas..."):
-                run = run_case(case_def)
-            st.session_state["diag_run"] = run
+            with st.spinner(SPINNER_DIAGNOSTIC):
+                result = run_case(case_def)
+            st.session_state["diag_result"] = result
         except (ValueError, yaml.YAMLError) as exc:
             st.error(f"{ERROR_INVALID_CASE} ({exc})")
         except Exception as exc:
             st.error(f"{ERROR_RUN_FAILED} ({exc})")
 
-    if "diag_run" in st.session_state:
-        run: CaseRunResult = st.session_state["diag_run"]
-        _render_classification(run, advanced)
-        _download_zip(run)
+    stored = st.session_state.get("diag_result")
+    if isinstance(stored, CaseRunResult):
+        _render_classification(stored, advanced)
+        _download_zip(stored)
 
 
 def _repair_tab(advanced: bool, time_limit: float) -> None:
     import streamlit as st
 
-    st.info(
-        f"Situacao de partida: URS real com 22 medidores "
-        f"({PRESET_REPAIR})."
-    )
+    st.info(REPAIR_BASELINE_INFO.format(preset=PRESET_REPAIR))
     yaml_text: Optional[str] = None
     if advanced:
         upload = st.file_uploader(UPLOAD_YAML, type=["yaml", "yml"], key="repair_upload")
@@ -263,7 +183,7 @@ def _repair_tab(advanced: bool, time_limit: float) -> None:
                 YAML_EDITOR, value=yaml_text, height=200, key="repair_yaml"
             )
 
-    if st.button(RUN_REPAIR, type="primary", key="repair_run"):
+    if st.button(RUN_REPAIR, type="primary", key="repair_run_btn"):
         try:
             if advanced and yaml_text:
                 case_def = _load_yaml_text(yaml_text, PRESET_REPAIR)
@@ -282,18 +202,18 @@ def _repair_tab(advanced: bool, time_limit: float) -> None:
                 case_def,
                 solver=replace(case_def.solver, time_limit_s=time_limit),
             )
-            with st.spinner("Buscando medidores faltantes..."):
-                run = run_case(case_def)
-            st.session_state["repair_run"] = run
+            with st.spinner(SPINNER_REPAIR):
+                result = run_case(case_def)
+            st.session_state["repair_result"] = result
         except (ValueError, yaml.YAMLError) as exc:
             st.error(f"{ERROR_INVALID_CASE} ({exc})")
         except Exception as exc:
             st.error(f"{ERROR_RUN_FAILED} ({exc})")
 
-    if "repair_run" in st.session_state:
-        run: CaseRunResult = st.session_state["repair_run"]
-        _render_repair(run, advanced)
-        _download_zip(run)
+    stored = st.session_state.get("repair_result")
+    if isinstance(stored, CaseRunResult):
+        _render_repair(stored, advanced)
+        _download_zip(stored)
 
 
 def run_app() -> None:
@@ -305,9 +225,9 @@ def run_app() -> None:
     st.caption(APP_SUBTITLE)
 
     with st.sidebar:
-        st.header("Configuracao")
+        st.header(SIDEBAR_HEADER)
         advanced = st.checkbox(ADVANCED_MODE, value=False)
-        time_limit = st.slider("Tempo maximo (s)", min_value=10, max_value=120, value=60)
+        time_limit = st.slider(SIDEBAR_TIME_LIMIT, min_value=10, max_value=120, value=60)
         st.markdown("---")
         with st.expander(ABOUT_TITLE, expanded=False):
             st.write(ABOUT_TEXT)
