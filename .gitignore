@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+results/
+.ruff_cache/
+.mypy_cache/
+planning.md
+tearing_results_table.tex

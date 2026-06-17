@@ -1,0 +1,40 @@
+# Example case metadata (YAML loader planned for Phase 2).
+# Equations match urs_document_bank.equations_documento().
+
+schema_version: "1.0"
+case:
+  id: urs_pdf_ideal
+  name: "URS ideal (PDF Sec. 4.1)"
+  section: "4.1"
+  instrumentation:
+    measured:
+      - Pa_A
+      - Pa_B
+      - Pa_C
+      - Pa_D
+      - Pa_E
+      - Pb_A
+      - Pb_B
+      - Pb_C
+      - Pb_D
+      - Pb_E
+      - Pc_A
+      - Pc_B
+      - Pc_C
+      - Pc_D
+      - Pc_E
+      - Rc_A
+      - Rc_B
+      - Rc_C
+      - Rc_D
+      - Rc_E
+      - Ra_A
+      - Ra_B
+      - Ra_C
+      - Ra_D
+      - Ra_E
+      - R
+    known_constants: []
+  analysis:
+    objective: classify
+    criterion: C_cl
