@@ -21,7 +21,11 @@ from structural_obs.app.ui_labels import (
 )
 from structural_obs.tearing.core import TearingResult
 from structural_obs.toolkit.schemas.case_schema import AnalysisConfig, InstrumentationConfig
-from structural_obs.toolkit.services.classify_service import CaseRunResult, run_classification
+from structural_obs.toolkit.services.classify_service import (
+    CaseRunResult,
+    _placement_uses_fixed_candidates,
+    run_classification,
+)
 from structural_obs.toolkit.services.milp_service import MilpRunSummary
 from structural_obs.toolkit.services.min_repair import EvaluationRow
 
@@ -269,7 +273,7 @@ def present_classification(run: CaseRunResult) -> ClassificationView:
 def _baseline_classification_run(run: CaseRunResult) -> CaseRunResult:
     """Classify the repair/placement base set for before/after comparison."""
     repair = run.case.analysis.repair
-    if repair is not None:
+    if repair is not None and repair.base_measured:
         base_measured = repair.base_measured
     else:
         base_measured = run.case.instrumentation.measured
@@ -333,9 +337,13 @@ def present_repair(run: CaseRunResult) -> RepairView:
     elif baseline_row.metrics.solver_status != "OPTIMAL":
         status = solver_label(baseline_row.metrics.solver_status)
     baseline_view, baseline_tearing = _baseline_classification_view(run)
+    is_auto_pool = (
+        run.objective == "min_placement"
+        and not _placement_uses_fixed_candidates(run.case)
+    )
     is_placement = run.objective == "min_placement"
     return RepairView(
-        headline=repair_headline(min_k, total, automatic=is_placement),
+        headline=repair_headline(min_k, total, automatic=is_auto_pool),
         base_measured_count=base_count,
         minimum_additions=min_k,
         total_after=total_after,
@@ -344,7 +352,7 @@ def present_repair(run: CaseRunResult) -> RepairView:
         baseline=baseline_view,
         baseline_tearing=baseline_tearing,
         candidates=repair.candidate_pool,
-        automatic_pool=is_placement,
+        automatic_pool=is_auto_pool,
     )
 
 

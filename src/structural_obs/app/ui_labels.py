@@ -12,19 +12,17 @@ APP_SUBTITLE = (
 
 # Abas (titulos curtos; detalhes em TAB_GUIDE e TAB_INTRO_*)
 TAB_DIAGNOSTIC = "Classificação"
-TAB_PLACEMENT = "Inst. mínima (automática)"
-TAB_REPAIR = "Inst. mínima (lista fixa)"
+TAB_PLACEMENT = "Inst. mínima"
 TAB_MILP = "Regras MILP (URS)"
 
 TAB_GUIDE_TITLE = "Qual aba usar?"
 TAB_GUIDE = (
     "**1. Classificação** — Você já tem uma lista de medidores e quer saber "
     "o que o processo consegue calcular hoje (sem instalar nada novo).\n\n"
-    "**2. Inst. mínima (automática)** — O sistema descobre sozinho onde medir "
-    "a mais para calcular tudo. Não precisa informar candidatos.\n\n"
-    "**3. Inst. mínima (lista fixa)** — Você informa quais medidores podem ser "
-    "instalados (ex.: sensores falhos) e o sistema busca o menor acréscimo.\n\n"
-    "**4. Regras MILP (URS)** — Otimização pelas regras de engenharia do "
+    "**2. Inst. mínima** — Encontra o menor acréscimo de medidores para calcular tudo. "
+    "Por padrão a busca é **automática**; no preset de reparo PDF ou no YAML avançado "
+    "você pode **restringir candidatos** (ex.: sensores falhos).\n\n"
+    "**3. Regras MILP (URS)** — Otimização pelas regras de engenharia do "
     "documento URS (F+R, permeados, limites por equação). Critério diferente "
     "da análise estrutural das abas anteriores."
 )
@@ -39,20 +37,14 @@ TAB_INTRO_DIAGNOSTIC = (
 TAB_INTRO_PLACEMENT = (
     "**Objetivo:** encontrar o **menor número de medidores novos** para calcular "
     "**todas** as grandezas do modelo.\n\n"
-    "**Entrada:** equações + medidores base (opcional; vazio = começa do zero).\n\n"
-    "**Como funciona:** o algoritmo identifica automaticamente quais variáveis "
-    "ainda não são calculáveis e testa combinações até achar a solução mínima.\n\n"
-    "**Atenção:** pode haver várias opções equivalentes (ex.: pares Ra ou pares FC). "
-    "Modelos grandes (busca do zero) podem demorar ou não encontrar solução."
-)
-TAB_INTRO_REPAIR = (
-    "**Objetivo:** mesmo que a aba automática, mas **restrito a uma lista de candidatos** "
-    "que você define no YAML.\n\n"
-    "**Entrada:** equações + medidores base + lista de candidatos permitidos.\n\n"
-    "**Quando usar:** quando já sabe **onde pode** instalar (ex.: reinstalar sensores "
-    "falhos R, Ra_C, Ra_D, Ra_E do cenário PDF).\n\n"
-    "**Diferença da automática:** aqui o resultado depende da lista informada; "
-    "na automática o sistema monta a lista sozinho."
+    "**Modos (escolha o cenário):**\n"
+    "- **Automático:** o sistema monta sozinho a lista de variáveis candidatas.\n"
+    "- **Candidatos restritos:** busca apenas entre medidores permitidos "
+    "(preset PDF: R, Ra_C, Ra_D, Ra_E) — configure em `analysis.repair.candidates` no YAML.\n\n"
+    "**Entrada:** equações + medidores base (`instrumentation.measured` ou "
+    "`repair.base_measured` no YAML).\n\n"
+    "**Atenção:** no modo automático pode haver várias opções equivalentes. "
+    "Busca do zero em modelos grandes pode demorar ou não encontrar solução."
 )
 TAB_INTRO_MILP = (
     "**Objetivo:** otimizar sensores pelas **regras de engenharia MILP** do documento URS, "
@@ -101,7 +93,7 @@ HELP_PRESET = (
 )
 PRESET_IDEAL = "URS ideal — 26 medidores (PDF Seção 4.1)"
 PRESET_REAL = "URS real — 22 medidores (PDF Seção 4.2)"
-PRESET_REPAIR = "URS real — reparo com candidatos falhos (PDF)"
+PRESET_REPAIR = "URS real — candidatos falhos (PDF, lista restrita)"
 PRESET_MILP_GLOBAL = "MILP global — menor conjunto pelas regras URS"
 PRESET_MILP_VERIFY_REAL = "MILP verificar — 22 medidores reais do PDF"
 PRESET_MILP_VERIFY_IDEAL = "MILP verificar — 26 medidores ideais do PDF"
@@ -123,7 +115,7 @@ DIAG_PRESET_HINTS: dict[str, str] = {
 }
 
 REPAIR_HINT = (
-    "**Lista fixa de candidatos:** R, Ra_C, Ra_D, Ra_E (sensores falhos do PDF). "
+    "**Lista restrita de candidatos:** R, Ra_C, Ra_D, Ra_E (sensores falhos do PDF). "
     "O sistema busca o **menor número** deles a reinstalar para calcular tudo. "
     "Esperado: instalar **2** entre {Ra_C, Ra_D, Ra_E}."
 )
@@ -302,15 +294,13 @@ COMPUTES_ALL_QUESTION = "Calcula tudo?"
 
 ABOUT_TITLE = "Sobre"
 ABOUT_TEXT = (
-    "Esta ferramenta oferece três paradigmas complementares:\n\n"
+    "Esta ferramenta oferece três modos complementares:\n\n"
     "1) **Classificação (CP-SAT tearing):** avalia o que é calculável "
     "estruturalmente com as medidas atuais.\n\n"
-    "2) **Instrumentação mínima (automática / candidatos):** descobre o menor "
-    "acréscimo de medidores para cobertura fechada C_cl = |V|, com busca "
-    "automática de candidatos ou lista manual.\n\n"
+    "2) **Instrumentação mínima:** encontra o menor acréscimo de medidores para "
+    "cobertura fechada. Busca automática de candidatos ou lista restrita no YAML.\n\n"
     "3) **Colocação MILP (y/z):** otimiza sensores sob regras de engenharia do "
-    "documento URS (F+R, permeados, limites por equação). O conjunto ótimo MILP "
-    "pode diferir do tearing.\n\n"
+    "documento URS. O conjunto ótimo MILP pode diferir do tearing.\n\n"
     "Nenhum dos modos substitui validação algébrica completa. "
     "Os arquivos exportados contêm detalhes técnicos para auditoria."
 )
@@ -340,8 +330,8 @@ HELP_TIME_LIMIT = (
 HELP_RUN_DIAGNOSTIC = "Executa a classificação estrutural com os medidores do cenário."
 HELP_RUN_REPAIR = "Busca o menor acréscimo entre os candidatos informados no YAML."
 HELP_RUN_PLACEMENT = (
-    "Descobre automaticamente onde medir. Pode levar alguns segundos "
-    "(mais combinações = mais tempo)."
+    "Busca o menor acréscimo de medidores (automático ou com candidatos restritos). "
+    "Pode levar alguns segundos."
 )
 HELP_RUN_MILP = "Resolve o modelo MILP com as regras de engenharia URS."
 TECH_DETAILS_HEADER = "Detalhes técnicos"
@@ -352,14 +342,14 @@ SPINNER_PLACEMENT = "Buscando instrumentação mínima (pode demorar)..."
 SPINNER_MILP = "Resolvendo MILP..."
 
 REPAIR_BASELINE_INFO = (
-    "Reparo com **lista fixa de candidatos** (sensores falhos do PDF). "
-    "Para descobrir candidatos automaticamente, use a aba **Inst. mínima (automática)**."
+    "Modo **candidatos restritos**: a busca considera apenas os medidores "
+    "listados em `analysis.repair.candidates` no YAML."
 )
 
 PLACEMENT_INFO = (
-    "Busca **automática**: o sistema identifica quais variáveis ainda não são "
-    "calculáveis e encontra o menor número de medidores novos para calcular tudo. "
-    "Você **não precisa** informar candidatos."
+    "Encontra o **menor acréscimo de medidores** para calcular todas as grandezas. "
+    "Por padrão a busca de candidatos é **automática**; use o preset de candidatos "
+    "falhos ou edite o YAML (modo avançado) para restringir onde pode instalar."
 )
 PLACEMENT_HINT_REAL = (
     "**Partida:** 22 medidores reais do PDF (Seção 4.2).\n\n"

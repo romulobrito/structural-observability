@@ -70,6 +70,22 @@ def test_placement_yaml_loads_correctly() -> None:
         assert case.analysis.criterion == "C_cl"
 
 
+def test_placement_with_fixed_candidates_matches_min_repair() -> None:
+    """min_placement with restricted candidates should match legacy min_repair."""
+    repair_run = run_case(load_case(CASES_DIR / "urs_pdf_repair.yaml"))
+    placement_run = run_case(load_case(CASES_DIR / "urs_min_placement_repair.yaml"))
+    assert repair_run.repair_result is not None
+    assert placement_run.repair_result is not None
+    repair = repair_run.repair_result
+    placement = placement_run.repair_result
+    assert placement_run.objective == "min_placement"
+    assert repair.minimum_additions == placement.minimum_additions
+    assert len(repair.optimal_solutions) == len(placement.optimal_solutions)
+    repair_sets = {frozenset(row.added) for row in repair.optimal_solutions}
+    placement_sets = {frozenset(row.added) for row in placement.optimal_solutions}
+    assert repair_sets == placement_sets
+
+
 def test_placement_report_json_serializable() -> None:
     """Repair/placement export must not fail on frozenset fields."""
     import json

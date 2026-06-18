@@ -128,10 +128,28 @@ def run_classification(case: CaseDefinition) -> CaseRunResult:
 def _resolve_repair_candidates(case: CaseDefinition) -> tuple[str, ...]:
     repair = case.analysis.repair
     if repair is None:
-        raise ValueError("min_repair requires analysis.repair")
+        raise ValueError("analysis.repair required to resolve candidates")
     if repair.candidates:
         return repair.candidates
     return tuple(repair_candidates(repair.candidate_pool))
+
+
+def _placement_base(case: CaseDefinition) -> Set[str]:
+    """Base measured set for min_placement (repair.base_measured or instrumentation)."""
+    repair = case.analysis.repair
+    if repair is not None and repair.base_measured:
+        return set(repair.base_measured)
+    return set(case.instrumentation.measured)
+
+
+def _placement_uses_fixed_candidates(case: CaseDefinition) -> bool:
+    """True when min_placement should search only within a manual candidate list."""
+    repair = case.analysis.repair
+    if repair is None:
+        return False
+    if repair.candidates:
+        return True
+    return bool(repair.candidate_pool)
 
 
 def run_minimum_repair(case: CaseDefinition) -> CaseRunResult:
@@ -168,19 +186,31 @@ def run_minimum_repair(case: CaseDefinition) -> CaseRunResult:
 
 
 def run_minimum_placement(case: CaseDefinition) -> CaseRunResult:
-    """Automatic sensor placement for C_cl == |V| without manual candidates."""
+    """Minimum sensor placement for C_cl == |V| (automatic or fixed candidate pool)."""
     config = tearing_config_from_case(case)
-    base = set(case.instrumentation.measured)
-    max_add = None
-    if case.analysis.repair is not None and case.analysis.repair.max_additions is not None:
-        max_add = case.analysis.repair.max_additions
-    search = find_minimum_placement(
-        case.case_id,
-        base,
-        config,
-        equations=case.equations,
-        max_additions=max_add,
-    )
+    base = _placement_base(case)
+    repair = case.analysis.repair
+    max_add = repair.max_additions if repair is not None else None
+
+    if _placement_uses_fixed_candidates(case):
+        candidates = _resolve_repair_candidates(case)
+        search = find_minimum_repair(
+            case.case_id,
+            base,
+            candidates,
+            config,
+            equations=case.equations,
+            max_additions=max_add,
+        )
+    else:
+        search = find_minimum_placement(
+            case.case_id,
+            base,
+            config,
+            equations=case.equations,
+            max_additions=max_add,
+        )
+
     baseline_row = evaluate_measured(
         case.equations,
         base,

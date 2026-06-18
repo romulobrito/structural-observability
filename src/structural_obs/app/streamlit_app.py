@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Streamlit UI: simple Portuguese labels for classify and min_repair."""
+"""Streamlit UI: simple Portuguese labels for classify and min_placement."""
 
 from __future__ import annotations
 
@@ -36,7 +36,6 @@ from structural_obs.app.ui_labels import (
     HELP_RUN_DIAGNOSTIC,
     HELP_RUN_MILP,
     HELP_RUN_PLACEMENT,
-    HELP_RUN_REPAIR,
     HELP_TIME_LIMIT,
     HELP_UPLOAD_YAML,
     HELP_YAML_EDITOR,
@@ -59,24 +58,20 @@ from structural_obs.app.ui_labels import (
     RUN_DIAGNOSTIC,
     RUN_MILP,
     RUN_PLACEMENT,
-    RUN_REPAIR,
     SECTION_REPAIR_BEFORE,
     SIDEBAR_HEADER,
     SIDEBAR_TIME_LIMIT,
     SPINNER_DIAGNOSTIC,
     SPINNER_MILP,
     SPINNER_PLACEMENT,
-    SPINNER_REPAIR,
     TAB_DIAGNOSTIC,
     TAB_GUIDE,
     TAB_GUIDE_TITLE,
     TAB_INTRO_DIAGNOSTIC,
     TAB_INTRO_MILP,
     TAB_INTRO_PLACEMENT,
-    TAB_INTRO_REPAIR,
     TAB_MILP,
     TAB_PLACEMENT,
-    TAB_REPAIR,
     UPLOAD_YAML,
     YAML_EDITOR,
 )
@@ -89,7 +84,7 @@ CASES_DIR = PROJECT_ROOT / "cases"
 PRESET_PATHS: dict[str, Path] = {
     PRESET_IDEAL: CASES_DIR / "urs_pdf_ideal.yaml",
     PRESET_REAL: CASES_DIR / "urs_pdf_real.yaml",
-    PRESET_REPAIR: CASES_DIR / "urs_pdf_repair.yaml",
+    PRESET_REPAIR: CASES_DIR / "urs_min_placement_repair.yaml",
     PRESET_PLACEMENT_REAL: CASES_DIR / "urs_min_placement_real.yaml",
     PRESET_PLACEMENT_ZERO: CASES_DIR / "urs_min_placement_zero.yaml",
     PRESET_MILP_GLOBAL: CASES_DIR / "urs_milp_global.yaml",
@@ -100,6 +95,7 @@ PRESET_PATHS: dict[str, Path] = {
 PLACEMENT_PRESET_HINTS: dict[str, str] = {
     PRESET_PLACEMENT_REAL: PLACEMENT_HINT_REAL,
     PRESET_PLACEMENT_ZERO: PLACEMENT_HINT_ZERO,
+    PRESET_REPAIR: REPAIR_HINT,
 }
 
 
@@ -234,59 +230,6 @@ def _diagnostic_tab(advanced: bool, time_limit: float) -> None:
         _download_zip(stored)
 
 
-def _repair_tab(advanced: bool, time_limit: float) -> None:
-    import streamlit as st
-
-    _tab_intro(TAB_INTRO_REPAIR)
-    st.info(REPAIR_BASELINE_INFO)
-    st.info(REPAIR_HINT)
-    yaml_text: Optional[str] = None
-    if advanced:
-        upload = st.file_uploader(
-            UPLOAD_YAML, type=["yaml", "yml"], key="repair_upload", help=HELP_UPLOAD_YAML
-        )
-        if upload is not None:
-            yaml_text = upload.getvalue().decode("utf-8")
-        else:
-            default_path = PRESET_PATHS[PRESET_REPAIR]
-            yaml_text = default_path.read_text(encoding="utf-8")
-            yaml_text = st.text_area(
-                YAML_EDITOR, value=yaml_text, height=200, key="repair_yaml", help=HELP_YAML_EDITOR
-            )
-
-    if st.button(RUN_REPAIR, type="primary", key="repair_run_btn", help=HELP_RUN_REPAIR):
-        try:
-            if advanced and yaml_text:
-                case_def = _load_yaml_text(yaml_text, PRESET_REPAIR)
-                if case_def.analysis.objective != "min_repair":
-                    case_def = replace(
-                        case_def,
-                        analysis=AnalysisConfig(
-                            objective="min_repair",
-                            criterion=case_def.analysis.criterion,
-                            repair=case_def.analysis.repair,
-                        ),
-                    )
-            else:
-                case_def = _load_preset(PRESET_PATHS[PRESET_REPAIR])
-            case_def = replace(
-                case_def,
-                solver=replace(case_def.solver, time_limit_s=time_limit),
-            )
-            with st.spinner(SPINNER_REPAIR):
-                result = run_case(case_def)
-            st.session_state["repair_result"] = result
-        except (ValueError, yaml.YAMLError) as exc:
-            st.error(f"{ERROR_INVALID_CASE} ({exc})")
-        except Exception as exc:
-            st.error(f"{ERROR_RUN_FAILED} ({exc})")
-
-    stored = st.session_state.get("repair_result")
-    if isinstance(stored, CaseRunResult):
-        _render_repair(stored, advanced)
-        _download_zip(stored)
-
-
 def _placement_tab(advanced: bool, time_limit: float) -> None:
     import streamlit as st
 
@@ -294,10 +237,12 @@ def _placement_tab(advanced: bool, time_limit: float) -> None:
     st.info(PLACEMENT_INFO)
     preset = st.selectbox(
         PRESET_LABEL,
-        [PRESET_PLACEMENT_REAL, PRESET_PLACEMENT_ZERO],
+        [PRESET_PLACEMENT_REAL, PRESET_REPAIR, PRESET_PLACEMENT_ZERO],
         key="placement_preset",
         help=HELP_PRESET,
     )
+    if preset == PRESET_REPAIR:
+        st.info(REPAIR_BASELINE_INFO)
     hint = PLACEMENT_PRESET_HINTS.get(preset)
     if hint:
         st.info(hint)
@@ -440,15 +385,13 @@ def run_app() -> None:
     st.info(CRITERION_LINE)
     with st.expander(TAB_GUIDE_TITLE, expanded=False):
         st.markdown(TAB_GUIDE)
-    tab_diag, tab_placement, tab_repair, tab_milp = st.tabs(
-        [TAB_DIAGNOSTIC, TAB_PLACEMENT, TAB_REPAIR, TAB_MILP]
+    tab_diag, tab_placement, tab_milp = st.tabs(
+        [TAB_DIAGNOSTIC, TAB_PLACEMENT, TAB_MILP]
     )
     with tab_diag:
         _diagnostic_tab(advanced, float(time_limit))
     with tab_placement:
         _placement_tab(advanced, float(time_limit))
-    with tab_repair:
-        _repair_tab(advanced, float(time_limit))
     with tab_milp:
         _milp_tab(advanced)
 

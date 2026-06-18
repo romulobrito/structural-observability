@@ -165,6 +165,12 @@ def validate_case_document(doc: CaseDocument, equations: Equations) -> CaseDefin
     if objective == "min_placement":
         if doc.analysis.criterion != "C_cl":
             raise ValueError("min_placement currently supports criterion C_cl only")
+        if doc.analysis.repair is not None:
+            if doc.analysis.repair.base_measured:
+                base = set(doc.analysis.repair.base_measured)
+                _validate_subset(base, universe, "repair.base_measured")
+            for cand in doc.analysis.repair.candidates:
+                _validate_variable_name(cand, "repair.candidates")
 
     if objective == "milp_repair":
         if doc.analysis.repair is None:
