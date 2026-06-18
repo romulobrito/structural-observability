@@ -56,9 +56,12 @@ from structural_obs.app.ui_labels import (
     HELP_TECH_INDETERMINATE,
     HELP_TECH_OPEN_TEARS,
     HELP_TECH_SOLVER,
+    HELP_AUTO_POOL,
+    HELP_REPAIR_CANDIDATES,
     HELP_TO_ADD,
     HELP_TOTAL_AFTER,
     NO,
+    SECTION_AUTO_POOL,
     SECTION_BY_STATUS,
     SECTION_INDETERMINATE,
     SECTION_INFERRED,
@@ -229,7 +232,14 @@ def render_repair_summary(view: RepairView) -> None:
     )
     c4.metric(CARD_GRANDEZAS, view.baseline.metrics.total, help=HELP_GRANDEZAS)
 
-    st.markdown(f"**{SECTION_REPAIR_CANDIDATES}**")
+    pool_title = SECTION_AUTO_POOL if view.automatic_pool else SECTION_REPAIR_CANDIDATES
+    pool_help = HELP_AUTO_POOL if view.automatic_pool else HELP_REPAIR_CANDIDATES
+    left, right = st.columns([11, 1])
+    with left:
+        st.markdown(f"**{pool_title}** ({len(view.candidates)})")
+    with right:
+        with st.popover("?"):
+            st.write(pool_help)
     st.write(_tag_list(view.candidates))
 
     if view.options:

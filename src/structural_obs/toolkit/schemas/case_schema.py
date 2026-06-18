@@ -11,6 +11,7 @@ Equations = Dict[str, List[str]]
 Objective = Literal[
     "classify",
     "min_repair",
+    "min_placement",
     "milp_global",
     "milp_repair",
     "milp_verify",
@@ -160,6 +161,10 @@ def validate_case_document(doc: CaseDocument, equations: Equations) -> CaseDefin
             _validate_variable_name(cand, "repair.candidates")
         if doc.analysis.criterion != "C_cl":
             raise ValueError("min_repair currently supports criterion C_cl only")
+
+    if objective == "min_placement":
+        if doc.analysis.criterion != "C_cl":
+            raise ValueError("min_placement currently supports criterion C_cl only")
 
     if objective == "milp_repair":
         if doc.analysis.repair is None:

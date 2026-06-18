@@ -89,6 +89,7 @@ def _parse_analysis(raw: Any) -> AnalysisConfig:
     allowed_objectives = (
         "classify",
         "min_repair",
+        "min_placement",
         "milp_global",
         "milp_repair",
         "milp_verify",

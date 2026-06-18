@@ -48,6 +48,24 @@ def _print_repair(run) -> None:
         )
 
 
+def _print_placement(run) -> None:
+    repair = run.repair_result
+    if repair is None:
+        return
+    print(f"Case: {run.case.case_id} | objective=min_placement | criterion=C_cl")
+    print(f"  base_measured={len(repair.base_measured)} | auto_pool={len(repair.candidate_pool)}")
+    if repair.minimum_additions is None:
+        print("  Nenhuma cobertura completa encontrada dentro do limite de busca.")
+        return
+    print(f"  minimum_additions k={repair.minimum_additions} | optima={len(repair.optimal_solutions)}")
+    for row in repair.optimal_solutions:
+        added = ", ".join(row.added)
+        print(
+            f"    +[{added}] -> C_cl={row.metrics.closed_fraction} "
+            f"status={row.metrics.solver_status}"
+        )
+
+
 def _print_milp(run) -> None:
     summary = run.milp_summary
     if summary is None:
@@ -84,6 +102,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         choices=(
             "classify",
             "min_repair",
+            "min_placement",
             "milp_global",
             "milp_repair",
             "milp_verify",
@@ -132,6 +151,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         _print_classification(run)
     elif run.objective == "min_repair":
         _print_repair(run)
+    elif run.objective == "min_placement":
+        _print_placement(run)
     elif run.objective in ("milp_global", "milp_repair", "milp_verify"):
         _print_milp(run)
     else:

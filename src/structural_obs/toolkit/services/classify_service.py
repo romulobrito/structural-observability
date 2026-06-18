@@ -14,6 +14,7 @@ from structural_obs.toolkit.services.min_repair import (
     EvaluationRow,
     RepairSearchResult,
     evaluate_measured,
+    find_minimum_placement,
     find_minimum_repair,
 )
 
@@ -166,12 +167,45 @@ def run_minimum_repair(case: CaseDefinition) -> CaseRunResult:
     )
 
 
+def run_minimum_placement(case: CaseDefinition) -> CaseRunResult:
+    """Automatic sensor placement for C_cl == |V| without manual candidates."""
+    config = tearing_config_from_case(case)
+    base = set(case.instrumentation.measured)
+    max_add = None
+    if case.analysis.repair is not None and case.analysis.repair.max_additions is not None:
+        max_add = case.analysis.repair.max_additions
+    search = find_minimum_placement(
+        case.case_id,
+        base,
+        config,
+        equations=case.equations,
+        max_additions=max_add,
+    )
+    baseline_row = evaluate_measured(
+        case.equations,
+        base,
+        scenario_key=case.case_id,
+        base_count=len(base),
+        added=(),
+        search_kind="baseline",
+        config=config,
+    )
+    return CaseRunResult(
+        case=case,
+        objective="min_placement",
+        repair_result=search,
+        repair_rows=(baseline_row,) + search.all_evaluated,
+    )
+
+
 def run_case(case: CaseDefinition) -> CaseRunResult:
     """Dispatch execution according to case.analysis.objective."""
     if case.analysis.objective == "classify":
         return run_classification(case)
     if case.analysis.objective == "min_repair":
         return run_minimum_repair(case)
+    if case.analysis.objective == "min_placement":
+        return run_minimum_placement(case)
     if case.analysis.objective in ("milp_global", "milp_repair", "milp_verify"):
         from structural_obs.toolkit.services.milp_service import run_milp
 
@@ -192,6 +226,7 @@ def tearing_result_to_dict(result: TearingResult) -> Dict[str, Any]:
 def repair_result_to_dict(result: RepairSearchResult) -> Dict[str, Any]:
     """Serialize repair search result for JSON export."""
     payload = asdict(result)
+    payload["base_measured"] = sorted(result.base_measured)
     payload["optimal_solutions"] = [
         asdict(row) | {"metrics": asdict(row.metrics)} for row in result.optimal_solutions
     ]

@@ -96,6 +96,7 @@ class RepairView:
     baseline: ClassificationView
     baseline_tearing: Optional[TearingResult]
     candidates: Tuple[str, ...]
+    automatic_pool: bool = False
 
 
 @dataclass(frozen=True)
@@ -183,17 +184,31 @@ def classification_headline(measured_count: int, calculable: int, total: int) ->
     )
 
 
-def repair_headline(minimum_additions: Optional[int], total: int) -> str:
-    """One-sentence summary for min_repair results."""
+def repair_headline(
+    minimum_additions: Optional[int], total: int, *, automatic: bool = False,
+) -> str:
+    """One-sentence summary for min_repair / min_placement results."""
     if minimum_additions is None:
+        if automatic:
+            return (
+                "Não foi possível encontrar instrumentação mínima para calcular "
+                f"todas as {total} grandezas dentro do limite de busca."
+            )
         return (
             "Não encontramos medidores adicionais que permitam calcular "
             f"todas as {total} grandezas com os candidatos informados."
         )
+    if minimum_additions == 0:
+        return f"O sistema já calcula todas as {total} grandezas com as medidas atuais."
     if minimum_additions == 1:
         word = "medidor"
     else:
         word = "medidores"
+    if automatic:
+        return (
+            f"Instrumentação mínima encontrada: instalar {minimum_additions} "
+            f"{word} para calcular todas as {total} grandezas."
+        )
     return (
         f"Para calcular todas as {total} grandezas, faltam instalar "
         f"{minimum_additions} {word}."
@@ -252,14 +267,16 @@ def present_classification(run: CaseRunResult) -> ClassificationView:
 
 
 def _baseline_classification_run(run: CaseRunResult) -> CaseRunResult:
-    """Classify the repair base set for before/after comparison."""
+    """Classify the repair/placement base set for before/after comparison."""
     repair = run.case.analysis.repair
-    if repair is None:
-        raise ValueError("Repair case missing analysis.repair")
+    if repair is not None:
+        base_measured = repair.base_measured
+    else:
+        base_measured = run.case.instrumentation.measured
     base_case = replace(
         run.case,
         instrumentation=InstrumentationConfig(
-            measured=repair.base_measured,
+            measured=base_measured,
             known_constants=run.case.instrumentation.known_constants,
         ),
         analysis=AnalysisConfig(
@@ -316,8 +333,9 @@ def present_repair(run: CaseRunResult) -> RepairView:
     elif baseline_row.metrics.solver_status != "OPTIMAL":
         status = solver_label(baseline_row.metrics.solver_status)
     baseline_view, baseline_tearing = _baseline_classification_view(run)
+    is_placement = run.objective == "min_placement"
     return RepairView(
-        headline=repair_headline(min_k, total),
+        headline=repair_headline(min_k, total, automatic=is_placement),
         base_measured_count=base_count,
         minimum_additions=min_k,
         total_after=total_after,
@@ -326,6 +344,7 @@ def present_repair(run: CaseRunResult) -> RepairView:
         baseline=baseline_view,
         baseline_tearing=baseline_tearing,
         candidates=repair.candidate_pool,
+        automatic_pool=is_placement,
     )
 
 

@@ -173,6 +173,115 @@ def find_minimum_repair(
     )
 
 
+def find_minimum_placement(
+    scenario_key: str,
+    base_measured: Set[str],
+    config: TearingConfig,
+    *,
+    equations: Optional[Equations] = None,
+    max_additions: Optional[int] = None,
+) -> RepairSearchResult:
+    """Find minimum sensors to reach C_cl == |V| with automatic candidate discovery.
+
+    Search phases (in order):
+      Phase 1: candidates = effective_indeterminate (not in base), if pool is small.
+      Phase 2: candidates = tears_open (minimal tear cuts).
+      Phase 3: candidates = vars in equations that contain tears or indeterminate vars.
+      Fallback: all non-base variables (capped by max_additions).
+
+    ``max_additions`` caps the search depth (default 4).  Larger values may
+    cause very long runtimes due to combinatorial explosion.
+    """
+    default_cap = 4
+    max_auto_pool = 15
+    cap = max_additions if max_additions is not None else default_cap
+
+    eqs = equations_documento() if equations is None else equations
+    all_vars = {v for vs in eqs.values() for v in vs}
+    base = set(base_measured)
+    non_base = sorted(all_vars - base)
+
+    if not non_base:
+        baseline = evaluate_baseline(scenario_key, base, config, equations=eqs)
+        return RepairSearchResult(
+            scenario_key=scenario_key,
+            base_measured=frozenset(base),
+            candidate_pool=(),
+            minimum_additions=0 if baseline.metrics.fully_closed else None,
+            optimal_solutions=(baseline,) if baseline.metrics.fully_closed else (),
+            all_evaluated=(baseline,),
+        )
+
+    baseline_result = classify_tearing(
+        eqs, base, case_name=f"{scenario_key}_placement_baseline", config=config,
+    )
+
+    if baseline_result.n_closed_coverage == baseline_result.total_variables:
+        baseline_row = evaluate_baseline(scenario_key, base, config, equations=eqs)
+        return RepairSearchResult(
+            scenario_key=scenario_key,
+            base_measured=frozenset(base),
+            candidate_pool=tuple(non_base),
+            minimum_additions=0,
+            optimal_solutions=(baseline_row,),
+            all_evaluated=(baseline_row,),
+        )
+
+    indeterminate = sorted(set(baseline_result.effective_indeterminate) - base)
+    tears = sorted(set(baseline_result.tears_open) - base)
+
+    def _safe_repair(pool: Sequence[str]) -> Optional[RepairSearchResult]:
+        """Run find_minimum_repair catching solver failures on edge cases."""
+        if not pool:
+            return None
+        try:
+            return find_minimum_repair(
+                scenario_key, base, pool, config,
+                equations=eqs, max_additions=cap,
+            )
+        except RuntimeError:
+            return None
+
+    if indeterminate and len(indeterminate) <= max_auto_pool:
+        result_indet = _safe_repair(indeterminate)
+        if result_indet is not None and result_indet.minimum_additions is not None:
+            return result_indet
+
+    if tears and len(tears) <= max_auto_pool:
+        result_tears = _safe_repair(tears)
+        if result_tears is not None and result_tears.minimum_additions is not None:
+            return result_tears
+
+    seed = set(baseline_result.effective_indeterminate) | set(baseline_result.tears_open)
+    expanded: Set[str] = set()
+    for _eq_name, eq_vars in eqs.items():
+        if seed & set(eq_vars):
+            expanded.update(eq_vars)
+    expanded -= base
+    phase3_pool = sorted(expanded)
+
+    if phase3_pool and len(phase3_pool) <= max_auto_pool:
+        result_p3 = _safe_repair(phase3_pool)
+        if result_p3 is not None and result_p3.minimum_additions is not None:
+            return result_p3
+
+    full_pool = sorted(all_vars - base)
+
+    if len(full_pool) <= max_auto_pool:
+        result_full = _safe_repair(full_pool)
+        if result_full is not None:
+            return result_full
+
+    return RepairSearchResult(
+        scenario_key=scenario_key,
+        base_measured=frozenset(base),
+        candidate_pool=tuple(indeterminate or tears or full_pool),
+        minimum_additions=None,
+        optimal_solutions=(),
+        all_evaluated=(),
+    )
+
+
 def find_redundant_sensors(
     scenario_key: str,
     starting_measured: Set[str],

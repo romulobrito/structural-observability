@@ -6,19 +6,67 @@ from __future__ import annotations
 
 APP_TITLE = "Avaliação de medidas do processo"
 APP_SUBTITLE = (
-    "Verifique o que dá para calcular com os medidores instalados "
-    "e quais medidores faltam para calcular tudo."
+    "Veja o que dá para calcular com os medidores instalados "
+    "e descubra quais medidores faltam para calcular todas as grandezas."
 )
 
-TAB_DIAGNOSTIC = "Classificação (avaliar medidas atuais)"
-TAB_REPAIR = "Instrumentação mínima (o que falta medir)"
-TAB_MILP = "Colocação MILP (regras de engenharia)"
+# Abas (titulos curtos; detalhes em TAB_GUIDE e TAB_INTRO_*)
+TAB_DIAGNOSTIC = "Classificação"
+TAB_PLACEMENT = "Inst. mínima (automática)"
+TAB_REPAIR = "Inst. mínima (lista fixa)"
+TAB_MILP = "Regras MILP (URS)"
+
+TAB_GUIDE_TITLE = "Qual aba usar?"
+TAB_GUIDE = (
+    "**1. Classificação** — Você já tem uma lista de medidores e quer saber "
+    "o que o processo consegue calcular hoje (sem instalar nada novo).\n\n"
+    "**2. Inst. mínima (automática)** — O sistema descobre sozinho onde medir "
+    "a mais para calcular tudo. Não precisa informar candidatos.\n\n"
+    "**3. Inst. mínima (lista fixa)** — Você informa quais medidores podem ser "
+    "instalados (ex.: sensores falhos) e o sistema busca o menor acréscimo.\n\n"
+    "**4. Regras MILP (URS)** — Otimização pelas regras de engenharia do "
+    "documento URS (F+R, permeados, limites por equação). Critério diferente "
+    "da análise estrutural das abas anteriores."
+)
+
+TAB_INTRO_DIAGNOSTIC = (
+    "**Objetivo:** avaliar a instrumentação **atual**.\n\n"
+    "**Entrada:** equações do modelo + lista de medidores já instalados.\n\n"
+    "**Saída:** quantas grandezas são calculáveis, quais ficam indetermináveis "
+    "e onde o balanço ficou aberto.\n\n"
+    "**Quando usar:** primeiro passo — entender a situação antes de propor novos medidores."
+)
+TAB_INTRO_PLACEMENT = (
+    "**Objetivo:** encontrar o **menor número de medidores novos** para calcular "
+    "**todas** as grandezas do modelo.\n\n"
+    "**Entrada:** equações + medidores base (opcional; vazio = começa do zero).\n\n"
+    "**Como funciona:** o algoritmo identifica automaticamente quais variáveis "
+    "ainda não são calculáveis e testa combinações até achar a solução mínima.\n\n"
+    "**Atenção:** pode haver várias opções equivalentes (ex.: pares Ra ou pares FC). "
+    "Modelos grandes (busca do zero) podem demorar ou não encontrar solução."
+)
+TAB_INTRO_REPAIR = (
+    "**Objetivo:** mesmo que a aba automática, mas **restrito a uma lista de candidatos** "
+    "que você define no YAML.\n\n"
+    "**Entrada:** equações + medidores base + lista de candidatos permitidos.\n\n"
+    "**Quando usar:** quando já sabe **onde pode** instalar (ex.: reinstalar sensores "
+    "falhos R, Ra_C, Ra_D, Ra_E do cenário PDF).\n\n"
+    "**Diferença da automática:** aqui o resultado depende da lista informada; "
+    "na automática o sistema monta a lista sozinho."
+)
+TAB_INTRO_MILP = (
+    "**Objetivo:** otimizar sensores pelas **regras de engenharia MILP** do documento URS, "
+    "não pela observabilidade estrutural (tearing).\n\n"
+    "**Modos:** global (menor conjunto pelas regras), verificar (auditar conjunto fixo).\n\n"
+    "**Importante:** o conjunto ótimo MILP (ex.: 11 sensores) **não garante** calcular "
+    "todas as 43 grandezas no tearing. Use a comparação estrutural no resultado."
+)
 
 MILP_WARNING = (
-    "Esta aba usa o modelo MILP (y/z) com regras de engenharia do documento URS. "
-    "Os resultados podem diferir da aba de instrumentação mínima (análise estrutural CP-SAT). "
-    "Para o cenário URS/PDF, o modo principal de otimização é o **MILP global**; "
-    "os modos verificar e reparo servem como **auditoria**."
+    "Esta aba usa **regras de engenharia MILP** (modelo y/z do documento URS). "
+    "Os resultados podem diferir das abas de instrumentação mínima (análise estrutural). "
+    "Use **MILP global** para propor instrumentação pelas regras; "
+    "use **verificar** para auditar um conjunto fixo de medidores."
 )
 
 MILP_MODE_GLOBAL = "Otimização global"
@@ -41,37 +89,54 @@ MILP_HINT_VERIFY_REAL = (
     "**Resultado esperado:** inviável — faltam permeados, F e outras regras. "
     "Use a aba de instrumentação mínima para saber o que falta no tearing."
 )
-MILP_HINT_REPAIR = (
-    "**O que faz:** mantém os 22 medidores reais fixos e permite instalar apenas entre "
-    "os candidatos falhos (R, Ra_C, Ra_D, Ra_E).\n\n"
-    "**Resultado esperado:** inviável no MILP — esses candidatos não corrigem conflitos "
-    "como permeados ou limite de sensores por equação. Para reparo estrutural, use a aba "
-    "**Instrumentação mínima**."
-)
-
 CRITERION_LINE = (
-    "Sucesso: todas as grandezas do modelo passam a ser calculáveis "
-    "com as medidas escolhidas."
+    "Critério de sucesso (abas de classificação e instrumentação mínima): "
+    "todas as grandezas do modelo passam a ser calculáveis com as medidas escolhidas."
 )
 
 PRESET_LABEL = "Cenário"
-PRESET_IDEAL = "URS ideal (26 medidores)"
-PRESET_REAL = "URS real (22 medidores)"
-PRESET_REPAIR = "URS real + sugestão de medidores (PDF)"
-PRESET_MILP_GLOBAL = "MILP global (menor conjunto pelas regras)"
-PRESET_MILP_VERIFY_REAL = "MILP verificar real (22 medidores PDF)"
-PRESET_MILP_VERIFY_IDEAL = "MILP verificar ideal (26 medidores PDF)"
-PRESET_MILP_REPAIR = "MILP reparo (base real + candidatos falhos)"
+HELP_PRESET = (
+    "Conjunto pré-configurado de equações e medidores. "
+    "No modo avançado você pode enviar ou editar seu próprio YAML."
+)
+PRESET_IDEAL = "URS ideal — 26 medidores (PDF Seção 4.1)"
+PRESET_REAL = "URS real — 22 medidores (PDF Seção 4.2)"
+PRESET_REPAIR = "URS real — reparo com candidatos falhos (PDF)"
+PRESET_MILP_GLOBAL = "MILP global — menor conjunto pelas regras URS"
+PRESET_MILP_VERIFY_REAL = "MILP verificar — 22 medidores reais do PDF"
+PRESET_MILP_VERIFY_IDEAL = "MILP verificar — 26 medidores ideais do PDF"
+PRESET_PLACEMENT_REAL = "URS real — busca automática a partir de 22 medidores"
+PRESET_PLACEMENT_ZERO = "Busca automática do zero (sem medidores base)"
+
+DIAG_HINT_IDEAL = (
+    "**26 medidores** do cenário ideal do PDF. "
+    "Esperado: calcula **todas** as 43 grandezas."
+)
+DIAG_HINT_REAL = (
+    "**22 medidores** do cenário real do PDF (4 sensores falhos). "
+    "Esperado: calcula **34 de 43** grandezas — faltam 9."
+)
+
+DIAG_PRESET_HINTS: dict[str, str] = {
+    PRESET_IDEAL: DIAG_HINT_IDEAL,
+    PRESET_REAL: DIAG_HINT_REAL,
+}
+
+REPAIR_HINT = (
+    "**Lista fixa de candidatos:** R, Ra_C, Ra_D, Ra_E (sensores falhos do PDF). "
+    "O sistema busca o **menor número** deles a reinstalar para calcular tudo. "
+    "Esperado: instalar **2** entre {Ra_C, Ra_D, Ra_E}."
+)
 
 MILP_PRESET_HINTS: dict[str, str] = {
     PRESET_MILP_GLOBAL: MILP_HINT_GLOBAL,
     PRESET_MILP_VERIFY_IDEAL: MILP_HINT_VERIFY_IDEAL,
     PRESET_MILP_VERIFY_REAL: MILP_HINT_VERIFY_REAL,
-    PRESET_MILP_REPAIR: MILP_HINT_REPAIR,
 }
 
 RUN_DIAGNOSTIC = "Avaliar medidas"
 RUN_REPAIR = "Buscar medidores faltantes"
+RUN_PLACEMENT = "Buscar instrumentação mínima"
 RUN_MILP = "Executar MILP"
 
 CARD_CALCULABLE = "Calculável hoje"
@@ -189,7 +254,16 @@ SECTION_BY_STATUS = "Detalhamento por situação"
 SECTION_VARIABLE_TABLE = "Todas as grandezas do modelo"
 SECTION_INSTALL_OPTIONS = "Opções de instalação"
 SECTION_REPAIR_BEFORE = "Situação antes de instalar novos medidores"
-SECTION_REPAIR_CANDIDATES = "Medidores candidatos à instalação"
+SECTION_REPAIR_CANDIDATES = "Medidores candidatos (lista informada no YAML)"
+SECTION_AUTO_POOL = "Variáveis analisadas na busca automática"
+HELP_REPAIR_CANDIDATES = (
+    "Somente estes medidores podem ser instalados. "
+    "Definidos em analysis.repair.candidates no YAML."
+)
+HELP_AUTO_POOL = (
+    "Pool montado automaticamente a partir das grandezas indetermináveis. "
+    "O algoritmo testa combinações deste conjunto."
+)
 SECTION_MILP_MEASURED = "Medidores instalados pelo MILP"
 SECTION_MILP_INFERRED = "Grandezas inferidas pelo MILP"
 SECTION_MILP_CONFLICTS = "Conflitos com as regras MILP"
@@ -205,9 +279,19 @@ COL_INDETERMINATE = "Indetermináveis"
 COL_OPEN_TEARS = "Pontos abertos"
 
 DOWNLOAD_ZIP = "Baixar relatório completo (ZIP)"
-ADVANCED_MODE = "Mostrar detalhes técnicos"
+HELP_DOWNLOAD_ZIP = "Exporta YAML, JSON e CSV com detalhes técnicos para auditoria."
+ADVANCED_MODE = "Modo avançado (editar YAML)"
+HELP_ADVANCED = (
+    "Permite enviar ou editar o arquivo de cenário (YAML) e ver métricas técnicas "
+    "como C_cl, C_ext e status do solver CP-SAT."
+)
 UPLOAD_YAML = "Enviar arquivo de cenário (YAML)"
+HELP_UPLOAD_YAML = (
+    "Arquivo com equações, medidores instalados e objetivo da análise. "
+    "Substitui o cenário pré-configurado selecionado."
+)
 YAML_EDITOR = "Editar cenário (YAML)"
+HELP_YAML_EDITOR = "Edite o cenário antes de executar. Validação ao clicar no botão de execução."
 
 SOLVER_CONFIRMED = "Resultado confirmado"
 SOLVER_OTHER = "Resultado com ressalvas (ver detalhes técnicos)"
@@ -218,14 +302,15 @@ COMPUTES_ALL_QUESTION = "Calcula tudo?"
 
 ABOUT_TITLE = "Sobre"
 ABOUT_TEXT = (
-    "Esta ferramenta oferece dois paradigmas complementares:\n\n"
-    "1) **Classificação / instrumentação mínima (CP-SAT tearing):** avalia o que é "
-    "calculável estruturalmente com as medidas atuais e busca o menor acréscimo de "
-    "medidores para cobertura fechada C_cl = |V|.\n\n"
-    "2) **Colocação MILP (y/z):** otimiza sensores sob regras de engenharia do "
+    "Esta ferramenta oferece três paradigmas complementares:\n\n"
+    "1) **Classificação (CP-SAT tearing):** avalia o que é calculável "
+    "estruturalmente com as medidas atuais.\n\n"
+    "2) **Instrumentação mínima (automática / candidatos):** descobre o menor "
+    "acréscimo de medidores para cobertura fechada C_cl = |V|, com busca "
+    "automática de candidatos ou lista manual.\n\n"
+    "3) **Colocação MILP (y/z):** otimiza sensores sob regras de engenharia do "
     "documento URS (F+R, permeados, limites por equação). O conjunto ótimo MILP "
-    "pode diferir do tearing; o conjunto ideal do PDF (26 medidores) costuma ser "
-    "inviável nas regras MILP.\n\n"
+    "pode diferir do tearing.\n\n"
     "Nenhum dos modos substitui validação algébrica completa. "
     "Os arquivos exportados contêm detalhes técnicos para auditoria."
 )
@@ -247,15 +332,46 @@ TECH_INDETERMINATE = "Indetermináveis efetivas"
 TECH_EQUATIONS = "Equações no modelo"
 
 SIDEBAR_HEADER = "Configuração"
-SIDEBAR_TIME_LIMIT = "Tempo máximo (s)"
+SIDEBAR_TIME_LIMIT = "Tempo máximo por análise (s)"
+HELP_TIME_LIMIT = (
+    "Limite de tempo do solver CP-SAT em cada classificação. "
+    "Aumente se a análise retornar resultado com ressalvas."
+)
+HELP_RUN_DIAGNOSTIC = "Executa a classificação estrutural com os medidores do cenário."
+HELP_RUN_REPAIR = "Busca o menor acréscimo entre os candidatos informados no YAML."
+HELP_RUN_PLACEMENT = (
+    "Descobre automaticamente onde medir. Pode levar alguns segundos "
+    "(mais combinações = mais tempo)."
+)
+HELP_RUN_MILP = "Resolve o modelo MILP com as regras de engenharia URS."
 TECH_DETAILS_HEADER = "Detalhes técnicos"
 
 SPINNER_DIAGNOSTIC = "Analisando medidas..."
 SPINNER_REPAIR = "Buscando medidores faltantes..."
+SPINNER_PLACEMENT = "Buscando instrumentação mínima (pode demorar)..."
 SPINNER_MILP = "Resolvendo MILP..."
 
 REPAIR_BASELINE_INFO = (
-    "Situação de partida: URS real com 22 medidores ({preset})."
+    "Reparo com **lista fixa de candidatos** (sensores falhos do PDF). "
+    "Para descobrir candidatos automaticamente, use a aba **Inst. mínima (automática)**."
+)
+
+PLACEMENT_INFO = (
+    "Busca **automática**: o sistema identifica quais variáveis ainda não são "
+    "calculáveis e encontra o menor número de medidores novos para calcular tudo. "
+    "Você **não precisa** informar candidatos."
+)
+PLACEMENT_HINT_REAL = (
+    "**Partida:** 22 medidores reais do PDF (Seção 4.2).\n\n"
+    "**Esperado:** instalar **2 medidores** a mais (várias combinações possíveis, "
+    "incluindo pares entre Ra_C, Ra_D, Ra_E).\n\n"
+    "**Tempo:** cerca de 30–60 segundos."
+)
+PLACEMENT_HINT_ZERO = (
+    "**Partida:** nenhum medidor instalado.\n\n"
+    "**Limitação:** modelos grandes exigem muitas combinações; "
+    "a busca pode não encontrar solução ou demorar muito. "
+    "Prefira partir de uma base conhecida (cenário URS real)."
 )
 
 VAR_STATUS_MEASURED = "Já medido"

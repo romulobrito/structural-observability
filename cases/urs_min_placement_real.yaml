@@ -1,0 +1,34 @@
+schema_version: "1.0"
+case:
+  id: urs_min_placement_real
+  name: "URS placement automatico (base real 22)"
+  section: "4.2"
+  equations_profile: urs_document
+  instrumentation:
+    measured:
+      - Pa_A
+      - Pa_B
+      - Pa_C
+      - Pa_D
+      - Pa_E
+      - Pb_A
+      - Pb_B
+      - Pb_C
+      - Pb_D
+      - Pb_E
+      - Pc_A
+      - Pc_B
+      - Pc_C
+      - Pc_D
+      - Pc_E
+      - Rc_A
+      - Rc_B
+      - Rc_C
+      - Rc_D
+      - Rc_E
+      - Ra_A
+      - Ra_B
+    known_constants: []
+  analysis:
+    objective: min_placement
+    criterion: C_cl

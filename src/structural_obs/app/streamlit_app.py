@@ -26,34 +26,59 @@ from structural_obs.app.ui_labels import (
     APP_SUBTITLE,
     APP_TITLE,
     CRITERION_LINE,
+    DIAG_PRESET_HINTS,
     DOWNLOAD_ZIP,
     ERROR_INVALID_CASE,
     ERROR_RUN_FAILED,
+    HELP_ADVANCED,
+    HELP_DOWNLOAD_ZIP,
+    HELP_PRESET,
+    HELP_RUN_DIAGNOSTIC,
+    HELP_RUN_MILP,
+    HELP_RUN_PLACEMENT,
+    HELP_RUN_REPAIR,
+    HELP_TIME_LIMIT,
+    HELP_UPLOAD_YAML,
+    HELP_YAML_EDITOR,
+    MILP_PRESET_HINTS,
+    MILP_WARNING,
+    PLACEMENT_HINT_REAL,
+    PLACEMENT_HINT_ZERO,
+    PLACEMENT_INFO,
     PRESET_IDEAL,
     PRESET_LABEL,
     PRESET_MILP_GLOBAL,
-    PRESET_MILP_REPAIR,
     PRESET_MILP_VERIFY_IDEAL,
     PRESET_MILP_VERIFY_REAL,
+    PRESET_PLACEMENT_REAL,
+    PRESET_PLACEMENT_ZERO,
     PRESET_REAL,
     PRESET_REPAIR,
     REPAIR_BASELINE_INFO,
+    REPAIR_HINT,
     RUN_DIAGNOSTIC,
     RUN_MILP,
+    RUN_PLACEMENT,
     RUN_REPAIR,
     SECTION_REPAIR_BEFORE,
     SIDEBAR_HEADER,
     SIDEBAR_TIME_LIMIT,
     SPINNER_DIAGNOSTIC,
     SPINNER_MILP,
+    SPINNER_PLACEMENT,
     SPINNER_REPAIR,
     TAB_DIAGNOSTIC,
+    TAB_GUIDE,
+    TAB_GUIDE_TITLE,
+    TAB_INTRO_DIAGNOSTIC,
+    TAB_INTRO_MILP,
+    TAB_INTRO_PLACEMENT,
+    TAB_INTRO_REPAIR,
     TAB_MILP,
+    TAB_PLACEMENT,
     TAB_REPAIR,
     UPLOAD_YAML,
     YAML_EDITOR,
-    MILP_PRESET_HINTS,
-    MILP_WARNING,
 )
 from structural_obs.toolkit.schemas.case_schema import AnalysisConfig
 from structural_obs.toolkit.services.classify_service import CaseRunResult, run_case
@@ -65,11 +90,25 @@ PRESET_PATHS: dict[str, Path] = {
     PRESET_IDEAL: CASES_DIR / "urs_pdf_ideal.yaml",
     PRESET_REAL: CASES_DIR / "urs_pdf_real.yaml",
     PRESET_REPAIR: CASES_DIR / "urs_pdf_repair.yaml",
+    PRESET_PLACEMENT_REAL: CASES_DIR / "urs_min_placement_real.yaml",
+    PRESET_PLACEMENT_ZERO: CASES_DIR / "urs_min_placement_zero.yaml",
     PRESET_MILP_GLOBAL: CASES_DIR / "urs_milp_global.yaml",
     PRESET_MILP_VERIFY_REAL: CASES_DIR / "urs_milp_verify_real.yaml",
     PRESET_MILP_VERIFY_IDEAL: CASES_DIR / "urs_milp_verify_ideal.yaml",
-    PRESET_MILP_REPAIR: CASES_DIR / "urs_milp_repair.yaml",
 }
+
+PLACEMENT_PRESET_HINTS: dict[str, str] = {
+    PRESET_PLACEMENT_REAL: PLACEMENT_HINT_REAL,
+    PRESET_PLACEMENT_ZERO: PLACEMENT_HINT_ZERO,
+}
+
+
+def _tab_intro(text: str) -> None:
+    """Collapsible per-tab explanation for the user."""
+    import streamlit as st
+
+    with st.expander("O que esta aba faz?", expanded=False):
+        st.markdown(text)
 
 
 def _load_preset(path: Path):
@@ -131,24 +170,38 @@ def _download_zip(run: CaseRunResult) -> None:
         data=payload,
         file_name=f"{case_id}_{run.objective}_relatorio.zip",
         mime="application/zip",
+        help=HELP_DOWNLOAD_ZIP,
     )
 
 
 def _diagnostic_tab(advanced: bool, time_limit: float) -> None:
     import streamlit as st
 
-    preset = st.selectbox(PRESET_LABEL, [PRESET_IDEAL, PRESET_REAL], key="diag_preset")
+    _tab_intro(TAB_INTRO_DIAGNOSTIC)
+    preset = st.selectbox(
+        PRESET_LABEL,
+        [PRESET_IDEAL, PRESET_REAL],
+        key="diag_preset",
+        help=HELP_PRESET,
+    )
+    hint = DIAG_PRESET_HINTS.get(preset)
+    if hint:
+        st.info(hint)
     yaml_text: Optional[str] = None
     if advanced:
-        upload = st.file_uploader(UPLOAD_YAML, type=["yaml", "yml"], key="diag_upload")
+        upload = st.file_uploader(
+            UPLOAD_YAML, type=["yaml", "yml"], key="diag_upload", help=HELP_UPLOAD_YAML
+        )
         if upload is not None:
             yaml_text = upload.getvalue().decode("utf-8")
         else:
             default_path = PRESET_PATHS[preset]
             yaml_text = default_path.read_text(encoding="utf-8")
-            yaml_text = st.text_area(YAML_EDITOR, value=yaml_text, height=200, key="diag_yaml")
+            yaml_text = st.text_area(
+                YAML_EDITOR, value=yaml_text, height=200, key="diag_yaml", help=HELP_YAML_EDITOR
+            )
 
-    if st.button(RUN_DIAGNOSTIC, type="primary", key="diag_run_btn"):
+    if st.button(RUN_DIAGNOSTIC, type="primary", key="diag_run_btn", help=HELP_RUN_DIAGNOSTIC):
         try:
             if advanced and yaml_text:
                 case_def = _load_yaml_text(yaml_text, preset)
@@ -184,20 +237,24 @@ def _diagnostic_tab(advanced: bool, time_limit: float) -> None:
 def _repair_tab(advanced: bool, time_limit: float) -> None:
     import streamlit as st
 
-    st.info(REPAIR_BASELINE_INFO.format(preset=PRESET_REPAIR))
+    _tab_intro(TAB_INTRO_REPAIR)
+    st.info(REPAIR_BASELINE_INFO)
+    st.info(REPAIR_HINT)
     yaml_text: Optional[str] = None
     if advanced:
-        upload = st.file_uploader(UPLOAD_YAML, type=["yaml", "yml"], key="repair_upload")
+        upload = st.file_uploader(
+            UPLOAD_YAML, type=["yaml", "yml"], key="repair_upload", help=HELP_UPLOAD_YAML
+        )
         if upload is not None:
             yaml_text = upload.getvalue().decode("utf-8")
         else:
             default_path = PRESET_PATHS[PRESET_REPAIR]
             yaml_text = default_path.read_text(encoding="utf-8")
             yaml_text = st.text_area(
-                YAML_EDITOR, value=yaml_text, height=200, key="repair_yaml"
+                YAML_EDITOR, value=yaml_text, height=200, key="repair_yaml", help=HELP_YAML_EDITOR
             )
 
-    if st.button(RUN_REPAIR, type="primary", key="repair_run_btn"):
+    if st.button(RUN_REPAIR, type="primary", key="repair_run_btn", help=HELP_RUN_REPAIR):
         try:
             if advanced and yaml_text:
                 case_def = _load_yaml_text(yaml_text, PRESET_REPAIR)
@@ -230,6 +287,68 @@ def _repair_tab(advanced: bool, time_limit: float) -> None:
         _download_zip(stored)
 
 
+def _placement_tab(advanced: bool, time_limit: float) -> None:
+    import streamlit as st
+
+    _tab_intro(TAB_INTRO_PLACEMENT)
+    st.info(PLACEMENT_INFO)
+    preset = st.selectbox(
+        PRESET_LABEL,
+        [PRESET_PLACEMENT_REAL, PRESET_PLACEMENT_ZERO],
+        key="placement_preset",
+        help=HELP_PRESET,
+    )
+    hint = PLACEMENT_PRESET_HINTS.get(preset)
+    if hint:
+        st.info(hint)
+
+    yaml_text: Optional[str] = None
+    if advanced:
+        upload = st.file_uploader(
+            UPLOAD_YAML, type=["yaml", "yml"], key="placement_upload", help=HELP_UPLOAD_YAML
+        )
+        if upload is not None:
+            yaml_text = upload.getvalue().decode("utf-8")
+        else:
+            default_path = PRESET_PATHS[preset]
+            yaml_text = default_path.read_text(encoding="utf-8")
+            yaml_text = st.text_area(
+                YAML_EDITOR, value=yaml_text, height=200, key="placement_yaml", help=HELP_YAML_EDITOR
+            )
+
+    if st.button(RUN_PLACEMENT, type="primary", key="placement_run_btn", help=HELP_RUN_PLACEMENT):
+        try:
+            if advanced and yaml_text:
+                case_def = _load_yaml_text(yaml_text, preset)
+                if case_def.analysis.objective != "min_placement":
+                    case_def = replace(
+                        case_def,
+                        analysis=AnalysisConfig(
+                            objective="min_placement",
+                            criterion=case_def.analysis.criterion,
+                            repair=case_def.analysis.repair,
+                        ),
+                    )
+            else:
+                case_def = _load_preset(PRESET_PATHS[preset])
+            case_def = replace(
+                case_def,
+                solver=replace(case_def.solver, time_limit_s=time_limit),
+            )
+            with st.spinner(SPINNER_PLACEMENT):
+                result = run_case(case_def)
+            st.session_state["placement_result"] = result
+        except (ValueError, yaml.YAMLError) as exc:
+            st.error(f"{ERROR_INVALID_CASE} ({exc})")
+        except Exception as exc:
+            st.error(f"{ERROR_RUN_FAILED} ({exc})")
+
+    stored = st.session_state.get("placement_result")
+    if isinstance(stored, CaseRunResult):
+        _render_repair(stored, advanced)
+        _download_zip(stored)
+
+
 def _render_milp(run: CaseRunResult, advanced: bool) -> None:
     import streamlit as st
 
@@ -251,6 +370,7 @@ def _render_milp(run: CaseRunResult, advanced: bool) -> None:
 def _milp_tab(advanced: bool) -> None:
     import streamlit as st
 
+    _tab_intro(TAB_INTRO_MILP)
     st.warning(MILP_WARNING)
     preset = st.selectbox(
         PRESET_LABEL,
@@ -258,24 +378,28 @@ def _milp_tab(advanced: bool) -> None:
             PRESET_MILP_GLOBAL,
             PRESET_MILP_VERIFY_REAL,
             PRESET_MILP_VERIFY_IDEAL,
-            PRESET_MILP_REPAIR,
         ],
         key="milp_preset",
+        help=HELP_PRESET,
     )
     hint = MILP_PRESET_HINTS.get(preset)
     if hint:
         st.info(hint)
     yaml_text: Optional[str] = None
     if advanced:
-        upload = st.file_uploader(UPLOAD_YAML, type=["yaml", "yml"], key="milp_upload")
+        upload = st.file_uploader(
+            UPLOAD_YAML, type=["yaml", "yml"], key="milp_upload", help=HELP_UPLOAD_YAML
+        )
         if upload is not None:
             yaml_text = upload.getvalue().decode("utf-8")
         else:
             default_path = PRESET_PATHS[preset]
             yaml_text = default_path.read_text(encoding="utf-8")
-            yaml_text = st.text_area(YAML_EDITOR, value=yaml_text, height=200, key="milp_yaml")
+            yaml_text = st.text_area(
+                YAML_EDITOR, value=yaml_text, height=200, key="milp_yaml", help=HELP_YAML_EDITOR
+            )
 
-    if st.button(RUN_MILP, type="primary", key="milp_run_btn"):
+    if st.button(RUN_MILP, type="primary", key="milp_run_btn", help=HELP_RUN_MILP):
         try:
             if advanced and yaml_text:
                 case_def = _load_yaml_text(yaml_text, preset)
@@ -305,16 +429,24 @@ def run_app() -> None:
 
     with st.sidebar:
         st.header(SIDEBAR_HEADER)
-        advanced = st.checkbox(ADVANCED_MODE, value=False)
-        time_limit = st.slider(SIDEBAR_TIME_LIMIT, min_value=10, max_value=120, value=60)
+        advanced = st.checkbox(ADVANCED_MODE, value=False, help=HELP_ADVANCED)
+        time_limit = st.slider(
+            SIDEBAR_TIME_LIMIT, min_value=10, max_value=120, value=60, help=HELP_TIME_LIMIT
+        )
         st.markdown("---")
         with st.expander(ABOUT_TITLE, expanded=False):
             st.write(ABOUT_TEXT)
 
     st.info(CRITERION_LINE)
-    tab_diag, tab_repair, tab_milp = st.tabs([TAB_DIAGNOSTIC, TAB_REPAIR, TAB_MILP])
+    with st.expander(TAB_GUIDE_TITLE, expanded=False):
+        st.markdown(TAB_GUIDE)
+    tab_diag, tab_placement, tab_repair, tab_milp = st.tabs(
+        [TAB_DIAGNOSTIC, TAB_PLACEMENT, TAB_REPAIR, TAB_MILP]
+    )
     with tab_diag:
         _diagnostic_tab(advanced, float(time_limit))
+    with tab_placement:
+        _placement_tab(advanced, float(time_limit))
     with tab_repair:
         _repair_tab(advanced, float(time_limit))
     with tab_milp:

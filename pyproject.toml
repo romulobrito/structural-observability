@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "structural-observability"
-version = "0.4.0"
-description = "CP-SAT structural classification, MILP placement, and PDF-style minimum instrumentation"
+version = "0.5.0"
+description = "CP-SAT structural classification, automatic sensor placement, MILP placement, and PDF-style minimum instrumentation"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
