@@ -12,6 +12,7 @@ license = { text = "MIT" }
 authors = [{ name = "Romulo Brito" }]
 dependencies = [
   "ortools",
+  "openpyxl",
   "pandas",
   "pyyaml",
 ]
@@ -27,6 +28,7 @@ structural-obs-run-cases = "structural_obs.tearing.cli.run_cases:main"
 structural-obs-min-inst = "structural_obs.toolkit.cli.min_instrumentation:main"
 structural-obs-ablation = "structural_obs.tearing.cli.run_matching_ablation:main"
 structural-obs-benchmark = "structural_obs.tearing.cli.run_time_benchmark:main"
+structural-obs-campaign = "structural_obs.toolkit.cli.additive_campaign:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/structural_obs"]

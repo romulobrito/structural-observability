@@ -33,6 +33,7 @@ class TearingConfig:
     random_seed: int = 42
     use_structural_preprocessing: bool = True
     use_union_of_maximum_matchings: bool = True
+    num_search_workers: int = 1
 
 
 @dataclass(frozen=True)
@@ -235,7 +236,7 @@ def _new_solver(config: TearingConfig) -> cp_model.CpSolver:
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = config.time_limit_s
     solver.parameters.random_seed = config.random_seed
-    solver.parameters.num_search_workers = 1
+    solver.parameters.num_search_workers = max(1, int(config.num_search_workers))
     solver.parameters.randomize_search = False
     solver.parameters.log_search_progress = False
     return solver

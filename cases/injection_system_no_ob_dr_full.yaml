@@ -1,0 +1,139 @@
+schema_version: "1.1"
+campaign:
+  id: injection_system_no_ob_dr_full
+  name: "Reduced water injection system - full observability"
+  source_profile: injection_system_no_ob_dr
+  candidate_mode: automatic
+  normalize_declared_duplicates: true
+  default_target_profile: all_active_variables
+  solver:
+    time_limit_s: 60
+    retry_time_limits_s: [60, 300, 600]
+    random_seed: 42
+    use_structural_preprocessing: true
+    decompose_components: true
+    num_search_workers: 4
+  sensor_costs: {}
+  stages:
+    - id: urs_balances
+      name: "URS mass balances"
+      block_id: urs_balances
+      approved_candidates: [R, Ra_C, Ra_D, Ra_E]
+
+    - id: stage_kpis
+      name: "URS stage KPIs"
+      block_id: stage_kpis
+      approved_candidates:
+        - PT_1P_A
+        - PT_1P_B
+        - PT_1P_C
+        - PT_1P_D
+        - PT_1P_E
+        - PT_P_A
+        - PT_P_B
+        - PT_P_C
+        - PT_P_D
+        - PT_P_E
+
+    - id: bank_kpis
+      name: "URS bank KPIs"
+      block_id: bank_kpis
+      approved_candidates:
+        - PT_aF_A
+        - PT_aF_B
+        - PT_aF_C
+        - PT_aF_D
+        - PT_aF_E
+        - PT_aR_A
+        - PT_aR_B
+        - PT_aR_C
+        - PT_aR_D
+        - PT_aR_E
+        - PT_aP_A
+        - PT_aP_B
+        - PT_aP_C
+        - PT_aP_D
+        - PT_aP_E
+        - PT_bF_A
+        - PT_bF_B
+        - PT_bF_C
+        - PT_bF_D
+        - PT_bF_E
+        - PT_bR_A
+        - PT_bR_B
+        - PT_bR_C
+        - PT_bR_D
+        - PT_bR_E
+        - PT_bP_A
+        - PT_bP_B
+        - PT_bP_C
+        - PT_bP_D
+        - PT_bP_E
+
+    - id: booster
+      name: "Booster pumps"
+      block_id: booster
+
+    - id: fine_filters
+      name: "Fine filters"
+      block_id: fine_filters
+
+    - id: coarse_filters
+      name: "Coarse filters"
+      block_id: coarse_filters
+
+    - id: biocide
+      name: "Biocide injection"
+      block_id: biocide
+
+    - id: antiscalant
+      name: "Antiscalant injection"
+      block_id: antiscalant
+
+    - id: bisulfite
+      name: "Bisulfite injection"
+      block_id: bisulfite
+
+    - id: cleaning
+      name: "Cleaning system"
+      block_id: cleaning
+
+    - id: deaeration
+      name: "Vacuum deaeration"
+      block_id: deaeration
+
+    - id: water_distribution
+      name: "Water distribution"
+      block_id: water_distribution
+
+    - id: distribution_filters
+      name: "Distribution filters"
+      block_id: distribution_filters
+
+    - id: heat_exchangers
+      name: "Heat exchangers"
+      block_id: heat_exchangers
+
+    - id: cooling_water_ac
+      name: "Classified-area cooling water"
+      block_id: cooling_water_ac
+
+    - id: cooling_water_anc
+      name: "Non-classified-area cooling water"
+      block_id: cooling_water_anc
+
+    - id: injection_pumping
+      name: "Injection water pumping"
+      block_id: injection_pumping
+
+    - id: hypochlorite_injection
+      name: "Hypochlorite capture and injection"
+      block_id: hypochlorite_injection
+
+    - id: electrochlorination
+      name: "Electrochlorination"
+      block_id: electrochlorination
+
+    - id: hypochlorite_tank
+      name: "Hypochlorite tank"
+      block_id: hypochlorite_tank

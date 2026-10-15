@@ -396,7 +396,7 @@ def _milp_headline(summary: MilpRunSummary) -> str:
     if mode == "verify" and status == "infeasible":
         return (
             "O conjunto informado não cumpre as regras MILP "
-            "(auditoria; resultado esperado para os cenários PDF)."
+            "(auditoria dos cenários de verificação)."
         )
     if mode == "repair" and status == "optimal":
         return f"Solução ótima com {n} medidores (base fixa + acréscimos mínimos)."

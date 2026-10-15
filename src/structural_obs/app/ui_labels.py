@@ -20,10 +20,10 @@ TAB_GUIDE = (
     "**1. Classificação** — Você já tem uma lista de medidores e quer saber "
     "o que o processo consegue calcular hoje (sem instalar nada novo).\n\n"
     "**2. Inst. mínima** — Encontra o menor acréscimo de medidores para calcular tudo. "
-    "Por padrão a busca é **automática**; no preset de reparo PDF ou no YAML avançado "
+    "Por padrão a busca é **automática**; no preset de candidatos restritos ou no YAML avançado "
     "você pode **restringir candidatos** (ex.: sensores falhos).\n\n"
     "**3. Regras MILP (URS)** — Otimização pelas regras de engenharia do "
-    "documento URS (F+R, permeados, limites por equação). Critério diferente "
+    "modelo URS (F+R, permeados, limites por equação). Critério diferente "
     "da análise estrutural das abas anteriores."
 )
 
@@ -40,14 +40,14 @@ TAB_INTRO_PLACEMENT = (
     "**Modos (escolha o cenário):**\n"
     "- **Automático:** o sistema monta sozinho a lista de variáveis candidatas.\n"
     "- **Candidatos restritos:** busca apenas entre medidores permitidos "
-    "(preset PDF: R, Ra_C, Ra_D, Ra_E) — configure em `analysis.repair.candidates` no YAML.\n\n"
+    "(ex.: R, Ra_C, Ra_D, Ra_E) — configure em `analysis.repair.candidates` no YAML.\n\n"
     "**Entrada:** equações + medidores base (`instrumentation.measured` ou "
     "`repair.base_measured` no YAML).\n\n"
     "**Atenção:** no modo automático pode haver várias opções equivalentes. "
     "Busca do zero em modelos grandes pode demorar ou não encontrar solução."
 )
 TAB_INTRO_MILP = (
-    "**Objetivo:** otimizar sensores pelas **regras de engenharia MILP** do documento URS, "
+    "**Objetivo:** otimizar sensores pelas **regras de engenharia MILP** do modelo URS, "
     "não pela observabilidade estrutural (tearing).\n\n"
     "**Modos:** global (menor conjunto pelas regras), verificar (auditar conjunto fixo).\n\n"
     "**Importante:** o conjunto ótimo MILP (ex.: 11 sensores) **não garante** calcular "
@@ -55,7 +55,7 @@ TAB_INTRO_MILP = (
 )
 
 MILP_WARNING = (
-    "Esta aba usa **regras de engenharia MILP** (modelo y/z do documento URS). "
+    "Esta aba usa **regras de engenharia MILP** (modelo y/z do caso URS). "
     "Os resultados podem diferir das abas de instrumentação mínima (análise estrutural). "
     "Use **MILP global** para propor instrumentação pelas regras; "
     "use **verificar** para auditar um conjunto fixo de medidores."
@@ -71,13 +71,13 @@ MILP_HINT_GLOBAL = (
     "**Quando usar:** para propor um novo projeto de instrumentação pelas regras de engenharia."
 )
 MILP_HINT_VERIFY_IDEAL = (
-    "**O que faz:** verifica se o conjunto **fixo** de 26 medidores do PDF (Seção 4.1) "
+    "**O que faz:** verifica se o conjunto **fixo** de 26 medidores do cenário ideal "
     "cumpre as regras MILP.\n\n"
-    "**Resultado esperado:** inviável — o PDF foi desenhado para tearing, não para MILP. "
+    "**Resultado esperado:** inviável — esse conjunto foi pensado para tearing, não para MILP. "
     "A lista de conflitos explica o porquê."
 )
 MILP_HINT_VERIFY_REAL = (
-    "**O que faz:** verifica se os 22 medidores reais do PDF (Seção 4.2) cumprem as regras MILP.\n\n"
+    "**O que faz:** verifica se os 22 medidores do cenário real cumprem as regras MILP.\n\n"
     "**Resultado esperado:** inviável — faltam permeados, F e outras regras. "
     "Use a aba de instrumentação mínima para saber o que falta no tearing."
 )
@@ -91,21 +91,21 @@ HELP_PRESET = (
     "Conjunto pré-configurado de equações e medidores. "
     "No modo avançado você pode enviar ou editar seu próprio YAML."
 )
-PRESET_IDEAL = "URS ideal — 26 medidores (PDF Seção 4.1)"
-PRESET_REAL = "URS real — 22 medidores (PDF Seção 4.2)"
-PRESET_REPAIR = "URS real — candidatos falhos (PDF, lista restrita)"
+PRESET_IDEAL = "URS ideal — 26 medidores"
+PRESET_REAL = "URS real — 22 medidores"
+PRESET_REPAIR = "URS real — candidatos falhos (lista restrita)"
 PRESET_MILP_GLOBAL = "MILP global — menor conjunto pelas regras URS"
-PRESET_MILP_VERIFY_REAL = "MILP verificar — 22 medidores reais do PDF"
-PRESET_MILP_VERIFY_IDEAL = "MILP verificar — 26 medidores ideais do PDF"
+PRESET_MILP_VERIFY_REAL = "MILP verificar — 22 medidores (cenário real)"
+PRESET_MILP_VERIFY_IDEAL = "MILP verificar — 26 medidores (cenário ideal)"
 PRESET_PLACEMENT_REAL = "URS real — busca automática a partir de 22 medidores"
 PRESET_PLACEMENT_ZERO = "Busca automática do zero (sem medidores base)"
 
 DIAG_HINT_IDEAL = (
-    "**26 medidores** do cenário ideal do PDF. "
+    "**26 medidores** do cenário ideal URS. "
     "Esperado: calcula **todas** as 43 grandezas."
 )
 DIAG_HINT_REAL = (
-    "**22 medidores** do cenário real do PDF (4 sensores falhos). "
+    "**22 medidores** do cenário real URS (4 sensores falhos). "
     "Esperado: calcula **34 de 43** grandezas — faltam 9."
 )
 
@@ -115,7 +115,7 @@ DIAG_PRESET_HINTS: dict[str, str] = {
 }
 
 REPAIR_HINT = (
-    "**Lista restrita de candidatos:** R, Ra_C, Ra_D, Ra_E (sensores falhos do PDF). "
+    "**Lista restrita de candidatos:** R, Ra_C, Ra_D, Ra_E (sensores falhos do cenário). "
     "O sistema busca o **menor número** deles a reinstalar para calcular tudo. "
     "Esperado: instalar **2** entre {Ra_C, Ra_D, Ra_E}."
 )
@@ -300,7 +300,7 @@ ABOUT_TEXT = (
     "2) **Instrumentação mínima:** encontra o menor acréscimo de medidores para "
     "cobertura fechada. Busca automática de candidatos ou lista restrita no YAML.\n\n"
     "3) **Colocação MILP (y/z):** otimiza sensores sob regras de engenharia do "
-    "documento URS. O conjunto ótimo MILP pode diferir do tearing.\n\n"
+    "modelo URS. O conjunto ótimo MILP pode diferir do tearing.\n\n"
     "Nenhum dos modos substitui validação algébrica completa. "
     "Os arquivos exportados contêm detalhes técnicos para auditoria."
 )
@@ -352,7 +352,7 @@ PLACEMENT_INFO = (
     "falhos ou edite o YAML (modo avançado) para restringir onde pode instalar."
 )
 PLACEMENT_HINT_REAL = (
-    "**Partida:** 22 medidores reais do PDF (Seção 4.2).\n\n"
+    "**Partida:** 22 medidores do cenário real URS.\n\n"
     "**Esperado:** instalar **2 medidores** a mais (várias combinações possíveis, "
     "incluindo pares entre Ra_C, Ra_D, Ra_E).\n\n"
     "**Tempo:** cerca de 30–60 segundos."
